@@ -10,7 +10,7 @@
     "streak_day3_bonus": 2
   },
   "growth": {
-    "formula": "delta = k * k_difficulty * (0.5 + quality) * subs^power * mult",
+    "formula": "base_growth = k * k_difficulty * (0.5 + quality) * max(1, subs)^power * starter_multiplier * own_words_multiplier",
     "power": 0.6,
     "k": 1.0,
     "starter_below_subs": 1000, "starter_x": 2.0,
@@ -42,7 +42,7 @@
     "easy": {
       "topic_min_cosine": 0.35,
       "k": 1.0,
-      "viral_x": 1.0,
+      "viral_x": 1,
       "hate_from": 5000,
       "hate_every_days": [4, 5],
       "emotion_tie_break": "sad_tone",
@@ -58,7 +58,7 @@
     "normal": {
       "topic_min_cosine": 0.45,
       "k": 1.1,
-      "viral_x": 1.2,
+      "viral_x": 2,
       "hate_from": 3000,
       "hate_every_days": [3, 4],
       "emotion_tie_break": "sad_tone",
@@ -74,7 +74,7 @@
     "hard": {
       "topic_min_cosine": 0.55,
       "k": 1.25,
-      "viral_x": 1.4,
+      "viral_x": 3,
       "hate_from": 1000,
       "hate_every_days": [2, 3],
       "emotion_tie_break": "sad_tone",

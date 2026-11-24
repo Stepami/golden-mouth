@@ -50,7 +50,7 @@ internal sealed class GameBalanceOptionsFactory(
                 item => Enum.Parse<WorldDifficulty>(item.Key, ignoreCase: true),
                 item => new DifficultyBalance(
                     item.GetValue<double>("k"),
-                    item.GetValue<double>("viral_x"),
+                    item.GetValue<int>("viral_x"),
                     item.GetValue<long>("hate_from"),
                     item.GetValue<double>("topic_min_cosine"),
                     item.GetRequiredSection("thresholds").GetChildren().ToDictionary(entry => entry.Key, entry => entry.Get<double>()),
@@ -85,7 +85,7 @@ internal sealed class GameBalanceOptionsFactory(
             new ViralBalance(
                 viral.GetValue<double>("base"),
                 viral.GetValue<double>("per_quality"),
-                viral.GetValue<double>("x"),
+                viral.GetValue<int>("x"),
                 viral.GetValue<double>("emotion_bonus")),
             new SkillBalance(
                 levelThresholds,

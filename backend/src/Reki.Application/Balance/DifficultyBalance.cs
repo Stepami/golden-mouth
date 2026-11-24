@@ -4,7 +4,7 @@ namespace Reki.Application.Balance;
 
 public sealed record DifficultyBalance(
     double GrowthCoefficient,
-    double ViralMultiplier,
+    int ViralMultiplier,
     long HateFrom,
     double TopicMinCosine,
     IReadOnlyDictionary<string, double> Thresholds,

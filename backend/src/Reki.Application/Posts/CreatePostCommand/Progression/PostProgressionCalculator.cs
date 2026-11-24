@@ -30,17 +30,17 @@ internal sealed class PostProgressionCalculator(
 
         var starId = await stars.GetRelevantCommenterAsync(gameWorld, post);
         var result = await viralityCalculator.CalculateAsync(post, turn, gameWorld, cancellationToken);
-        var (views, likes) = postNumbersCalculator.Calculate(gameWorld, result.Virality);
-        var subscriberDelta = subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, result.Virality);
+        var (views, likes) = postNumbersCalculator.Calculate(gameWorld, result);
+        var subscriberDelta = subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, result);
         var skills = AddSkillExperience(player, post, turn, ownWords);
 
         return new PostProgression(
-            subscriberDelta * result.Multiplier,
+            subscriberDelta,
             turn.Quality,
             result.Virality,
             skills,
-            (views * result.Multiplier) + result.ViewsAdder,
-            likes * result.Multiplier,
+            views,
+            likes,
             starId,
             turn);
     }

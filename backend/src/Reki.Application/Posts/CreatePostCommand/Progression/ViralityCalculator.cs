@@ -26,16 +26,24 @@ internal sealed class ViralityCalculator(IOptionsMonitor<GameBalance> balance, I
         if (turn.IsFlop)
         {
             var guard = await bonuses.TryClaimBonus<FlopGuardBonus>(post.OwnerId, cancellationToken);
-            return guard is null ? new(PostViralityStatus.Flop) : new(PostViralityStatus.FlopGuard, ViewsAdder: guard.Adder);
+            return guard is null
+                ? new(PostViralityStatus.Flop)
+                : new(PostViralityStatus.FlopGuard, ViewsAdder: guard.Adder);
         }
 
         if (IsNaturallyViral(post, turn, world))
         {
-            return new(PostViralityStatus.Viral);
+            return new(
+                PostViralityStatus.Viral,
+                Multiplier: balance.CurrentValue.Difficulties[world.Difficulty].ViralMultiplier);
         }
 
         var card = await bonuses.TryClaimBonus<ViralCardBonus>(post.OwnerId, cancellationToken);
-        return card is null ? new(PostViralityStatus.None) : new(PostViralityStatus.ViralCard, card.Multiplier);
+        return card is null
+            ? new(PostViralityStatus.None)
+            : new(
+                PostViralityStatus.ViralCard,
+                card.Multiplier * balance.CurrentValue.Viral.Multiplier);
     }
 
     private static double StableRoll(GamePost post)

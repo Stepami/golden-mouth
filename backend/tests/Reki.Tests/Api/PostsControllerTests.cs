@@ -95,7 +95,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task CreatePost_FlopGuard_ReversesSubscriberLossAsync()
+    public async Task CreatePost_FlopGuard_GivesGrowthWithoutDramaMultiplierAsync()
     {
         // Arrange
         using var api = Factory.CreateApiClient(8303);
@@ -114,7 +114,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         await Assert.That(ordinary.Result.Delta).IsLessThan(0);
         await Assert.That(post.Result.Virality).IsEqualTo(PostViralityStatus.FlopGuard);
-        await Assert.That(post.Result.Delta).IsEqualTo(-ordinary.Result.Delta);
+        await Assert.That(post.Result.Delta).IsGreaterThan(0);
+        await Assert.That(post.Result.Delta).IsLessThan(-ordinary.Result.Delta);
         await Assert.That(post.Result.Views).IsGreaterThanOrEqualTo(10L);
     }
 
