@@ -166,7 +166,7 @@ Publications, thread replies and feed reads schedule separate one-off star-feed 
 
 ## Profile linking (#268)
 
-`POST /merge` uses the current game JWT and accepts `{ "fromPlayerId": "<player ID>" }`. The ID comes from
+`POST /me/merge` uses the current game JWT and accepts `{ "fromPlayerId": "<player ID>" }`. The ID comes from
 `GET /me` under the other login's JWT. The current profile remains; the source profile and its game data and
 sessions are deleted, then its external login IDs are added to the current profile. A source ID equal to the current
 player returns 409; a missing profile returns 404. No tokens are issued by this endpoint.

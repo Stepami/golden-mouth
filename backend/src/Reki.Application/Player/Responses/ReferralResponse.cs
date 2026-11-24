@@ -1,3 +1,3 @@
-namespace Reki.Application.Invites.Responses;
+namespace Reki.Application.Player.Responses;
 
 public sealed record ReferralResponse(string Code);

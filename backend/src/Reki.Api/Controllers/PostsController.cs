@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Posts;
 using Reki.Application.Posts;
-using Reki.Application.Posts.ClaimOnboardingBonusCommand;
 using Reki.Application.Posts.CreatePostCommand;
 using Reki.Application.Posts.GetPostDetail;
 using Reki.Application.Posts.LikePostCommand;
@@ -28,15 +27,6 @@ namespace Reki.Api.Controllers;
 [Route("posts")]
 public sealed class PostsController(ISender sender) : ControllerBase
 {
-    [HttpGet("onboarding-bonus/{postId}", Name = "ClaimOnboardingBonus")]
-    [ActionName("ClaimOnboardingBonus")]
-    public async Task<Ok<bool>> ClaimOnboardingBonusAsync(
-        PostId postId,
-        [FromServices] IRekiContext rekiContext,
-        CancellationToken cancellationToken) =>
-        TypedResults.Ok(await sender.Send(
-            new ClaimOnboardingBonus(await rekiContext.Player, postId), cancellationToken));
-
     [HttpPost(Name = "CreatePost")]
     [ActionName("CreatePost")]
     public async Task<Ok<CreatePostResponse>> CreatePostAsync(

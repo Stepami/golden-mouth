@@ -1,6 +1,6 @@
 using Mediator;
-using Reki.Application.Invites.GetReferral;
 using Reki.Application.Player;
+using Reki.Application.Player.GetReferral;
 using Reki.Domain.Player;
 using Telegram.Bot;
 using Telegram.Bot.Types;

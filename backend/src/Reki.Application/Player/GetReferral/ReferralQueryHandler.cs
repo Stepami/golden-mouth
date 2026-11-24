@@ -1,5 +1,6 @@
 using Mediator;
-using Reki.Application.Invites.Responses;
+using Reki.Application.Player.GetReferral;
+using Reki.Application.Player.Responses;
 
 namespace Reki.Application.Invites.GetReferral;
 

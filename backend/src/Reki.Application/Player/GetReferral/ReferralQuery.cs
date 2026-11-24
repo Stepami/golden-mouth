@@ -1,7 +1,7 @@
 using Mediator;
-using Reki.Application.Invites.Responses;
+using Reki.Application.Player.Responses;
 using Reki.Domain.Player;
 
-namespace Reki.Application.Invites.GetReferral;
+namespace Reki.Application.Player.GetReferral;
 
 public sealed record ReferralQuery(PlayerId PlayerId) : IQuery<ReferralResponse>;

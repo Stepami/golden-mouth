@@ -9,7 +9,6 @@ using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Api.Requests.Worlds;
-using Reki.Application.Invites.Responses;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
