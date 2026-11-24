@@ -31,6 +31,7 @@
         <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="System.Security.Cryptography.Xml" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="DotNext.Threading" Version="6.12.1"/>
+        <PackageVersion Include="GrammarSharp.Russian" Version="0.3.0"/>
         <PackageVersion Include="Mediator.Abstractions" Version="$(MediatorVersion)"/>
         <PackageVersion Include="Mediator.SourceGenerator" Version="$(MediatorVersion)"/>
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="$(MicrosoftExtensionsVersion)"/>

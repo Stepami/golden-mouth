@@ -3,6 +3,7 @@ using Reki.Application;
 using Reki.Application.Notifications;
 using Reki.Application.Player;
 using Reki.Domain.Notifications;
+using Reki.Domain.Player;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
 
@@ -13,6 +14,7 @@ internal sealed class SendNotificationsJob(
     IPlayerRepository players,
     IUnitOfWork unitOfWork,
     IServiceProvider services,
+    INotificationContentFactory<PlayerProfile> regularContentFactory,
     TimeProvider timeProvider) : ITickerFunction<NotificationChannelType>
 {
     public async Task ExecuteAsync(TickerFunctionContext<NotificationChannelType> context, CancellationToken cancellationToken = default)
@@ -60,7 +62,8 @@ internal sealed class SendNotificationsJob(
                     if (notification.Kind is NotificationKind.Regular &&
                         await notifications.GetPendingAsync(notification.PlayerId, type, token) is null)
                     {
-                        var next = Notification.New(notification.PlayerId, type, timeProvider.GetUtcNow().AddDays(1), notification.Content);
+                        var content = await regularContentFactory.GetContent(player);
+                        var next = Notification.New(notification.PlayerId, type, timeProvider.GetUtcNow().AddDays(1), content);
                         await notifications.SaveAsync(next, token);
                     }
 

@@ -12,7 +12,7 @@ public sealed class Notification(
     int version = 0,
     NotificationKind kind = NotificationKind.Regular)
 {
-    public const string DefaultContent = "Пора попадать в РЕКИ! Заходи в игру и пиши посты - тебя ждёт успех!";
+    private const string DefaultContent = "Пора попадать в РЕКИ! Заходи в игру и пиши посты - тебя ждёт успех!";
 
     public NotificationId Id { get; private set; } = id;
     public PlayerId PlayerId { get; private set; } = playerId;
@@ -31,13 +31,11 @@ public sealed class Notification(
         NotificationKind kind = NotificationKind.Regular) =>
         new(NotificationId.From(sendAt), playerId, channelType, NotificationStatus.Pending, sendAt, content, kind: kind);
 
-    public void Reschedule(DateTimeOffset sendAt)
+    public void Reschedule(DateTimeOffset sendAt, string content)
     {
-        if (SendAt != sendAt)
-        {
-            SendAt = sendAt;
-            Version++;
-        }
+        SendAt = sendAt;
+        Version++;
+        Content = content;
     }
 
     public void Complete(NotificationStatus result)
