@@ -33,7 +33,15 @@ public sealed partial class TelegramController(
             return TypedResults.Ok();
         }
 
-        await services.GetRequiredKeyedService<IBotCommandHandler>(text[1..]).Handle(message);
+        try
+        {
+            await services.GetRequiredKeyedService<IBotCommandHandler>(text[1..]).Handle(message);
+        }
+        catch (Exception exception)
+        {
+            LogWebhookError(exception, message.From.Id, message.From.Username);
+        }
+
         return TypedResults.Ok();
     }
 
@@ -42,4 +50,7 @@ public sealed partial class TelegramController(
 
     [LoggerMessage(LogLevel.Warning, "Unsupported bot command {BotCommand}")]
     private partial void LogUnsupportedBotCommand(string botCommand);
+
+    [LoggerMessage(LogLevel.Error, "Webhook error occurred {ChatId} {UserName}")]
+    private partial void LogWebhookError(Exception exception, long chatId, string? userName);
 }
