@@ -220,6 +220,7 @@ Token JSON содержит `token_type=Bearer`, `access_token`, `expires_in`, `
 | `POST /reports` `{ commentId, reason }` | Текущий обработчик пишет telemetry, полноценная жалоба/очередь ещё не реализованы (#151); UI скрыт | 06-1 (недоступен) |
 | `POST /bonus/plus-interest` | `{ bonus: 5 }` | 04-2 |
 | `POST /bonus/exchange-energy` | `{ exchanged, wallet }` | 04-1 |
+| `GET /bonus/booster` | `true` при покупке за 6 кристаллов, `false` при нехватке. В паке 3 виральные карты ×3 и 3 флоп-гарда +5 | Магазин кристаллов |
 | `DELETE /me` | 200 без тела; после UoW удаления игровых данных сервисы OpenIddict удаляют все токены и авторизации по PlayerId; сессии других игроков и клиентское приложение сохраняются | 05-8 |
 | `POST /me/merge` | JWT текущей сессии; JSON `{ fromPlayerId }`, ID из `/me` второго входа. Переносит внешние привязки и удаляет второй профиль; текущая сессия сохраняется | 05-5 |
 | `GET /cards/story/:playerId/:postId.png` | публичная картинка 9:16 для Telegram Stories, без TMA-авторизации | 02-7 |

@@ -791,6 +791,29 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(stored["Wallet"]["Crystals"].AsInt32).IsEqualTo(7);
     }
 
+    [Test]
+    public async Task Booster_WithSixCrystals_BuysBothCardTypesAsync()
+    {
+        // Arrange
+        const long userId = 28408;
+        using var api = Factory.CreateApiClient(userId);
+        var player = await CreatePlayerWithWorldAsync(api);
+        await SetWalletAsync(userId, 10, 6);
+
+        // Act
+        var purchased = await api.Bonus.ClaimBoosterAsync(CancellationToken.None);
+        var wallet = await ReadWalletAsync(api);
+        var bonuses = await Database.GetCollection<Bonus>("bonuses")
+            .Find(bonus => bonus.PlayerId == player.Id && !bonus.IsClaimed)
+            .ToListAsync();
+
+        // Assert
+        await Assert.That(purchased).IsTrue();
+        await Assert.That(wallet.Crystals).IsEqualTo(0);
+        await Assert.That(bonuses.OfType<ViralCardBonus>().Select(card => card.Multiplier)).IsEquivalentTo([5, 3, 3, 3]);
+        await Assert.That(bonuses.OfType<FlopGuardBonus>().Select(card => card.Adder)).IsEquivalentTo([10, 5, 5, 5]);
+    }
+
     private static async Task<EnergyWalletResponse> ReadWalletAsync(TestApiClient api) =>
         (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet
         ?? throw new InvalidOperationException("The player response has no wallet.");

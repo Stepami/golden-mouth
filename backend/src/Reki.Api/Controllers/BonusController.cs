@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Player;
 using Reki.Application.Player.ExchangeEnergyCommand;
+using Reki.Application.Player.GetBoosterCommand;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts.ClaimOnboardingBonusCommand;
 using Reki.Application.RekiContext;
@@ -47,4 +48,9 @@ public sealed class BonusController(ISender sender) : ControllerBase
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await sender.Send(
             new ClaimOnboardingBonus(await rekiContext.Player, postId), cancellationToken));
+
+    [HttpGet("booster", Name = "ClaimBooster")]
+    [ActionName("ClaimBooster")]
+    public async Task<Ok<bool>> ClaimBooster(CancellationToken ct) =>
+        TypedResults.Ok(await sender.Send(new GetBooster(), ct));
 }
