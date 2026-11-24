@@ -4,7 +4,8 @@
   "scope": [
     "Вечерело",
     "Спасти Хогвартс",
-    "Игра домов"
+    "Игра домов",
+    "Последние инфобизеры"
   ],
   "situationLabels": {
     "teasing": "Подкол или шутка",
@@ -14562,6 +14563,192 @@
           ],
           "exampleInput": "Что в этот черновик можно вписать от твоего имени уже сейчас?",
           "context": "После показа пленного мертвеца дома обсуждают помощь Северу. На столе черновик соглашения. Пока в нём три пустые строки: люди, зерно и место сбора."
+        }
+      ]
+    },
+    {
+      "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+      "title": "Последние инфобизеры",
+      "records": [
+        {
+          "id": "infobiz:greedy_wolf:1",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Курс даст тебе работу? Давай сначала посмотрим, что ты сможешь показать на собесе.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Спросили о трудоустройстве",
+          "situationIds": [
+            "question"
+          ]
+        },
+        {
+          "id": "infobiz:greedy_wolf:2",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Проценты красиво выглядят на слайде. Давай разберём один кейс от заявки до собеса.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Попросили статистику",
+          "situationIds": [
+            "evidence"
+          ]
+        },
+        {
+          "id": "infobiz:greedy_wolf:3",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Вот этот проект я бы первым поставил в портфолио. Только покажи, что в нём делал ты.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Похвалили практику",
+          "situationIds": [
+            "support"
+          ]
+        },
+        {
+          "id": "infobiz:alexey_nl:4",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Положим рядом обещание из рекламы и требования вакансии. Уже видно, где расходится.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Попросили проверить рекламу",
+          "situationIds": [
+            "evidence"
+          ]
+        },
+        {
+          "id": "infobiz:alexey_nl:5",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Один выпускник устроился. Сколько человек было в потоке?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Привели один удачный пример",
+          "situationIds": [
+            "evidence"
+          ]
+        },
+        {
+          "id": "infobiz:alexey_nl:6",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Покажи, что выпускник сделал сам и какие решения может объяснить. Тогда есть что обсуждать.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Прислали проект",
+          "situationIds": [
+            "evidence"
+          ]
+        },
+        {
+          "id": "infobiz:nika:7",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Сертификат вижу. Теперь покажи, где в проекте ты застрял и как из этого выбрался.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Кандидат принёс сертификат",
+          "situationIds": [
+            "evidence"
+          ]
+        },
+        {
+          "id": "infobiz:nika:8",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Дай одну задачу, которую ты довёл до конца. На собесе с неё и начнём.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Новичка просят показать опыт",
+          "situationIds": [
+            "question"
+          ]
+        },
+        {
+          "id": "infobiz:nika:9",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Отлично. Расскажи, что пришлось переделать после первой обратной связи.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Кандидат обещает быстро учиться",
+          "situationIds": [
+            "question"
+          ]
+        },
+        {
+          "id": "infobiz:2kotleti_news:10",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "В рекламе гарантировали работу. В комментариях уже гарантируют только жаркий спор.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Спор о гарантиях",
+          "situationIds": [
+            "disagreement"
+          ]
+        },
+        {
+          "id": "infobiz:2kotleti_news:11",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Пока у нас две версии и один скрин. До победного отчёта ещё далеко.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Попросили подвести итог",
+          "situationIds": [
+            "evidence"
+          ]
+        },
+        {
+          "id": "infobiz:2kotleti_news:12",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "worldName": "Последние инфобизеры",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Вот и новость: в треде наконец есть что проверить. С неё и начну обзор.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "when": "Появился проверяемый факт",
+          "situationIds": [
+            "evidence"
+          ]
         }
       ]
     }
