@@ -321,14 +321,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var friendApi = Factory.CreateApiClient(8003);
         var inviter = await CreatePlayerWithWorldAsync(inviterApi);
         await CreatePlayerWithWorldAsync(otherApi);
-        var code = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
-        var other = await otherApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
+        var code = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var other = await otherApi.Player.GetReferralCodeAsync(CancellationToken.None);
         await CreatePlayerWithWorldAsync(friendApi, referralCode: code.Code);
 
         var inviterAfterRegistration = await GetStoredPlayerAsync(8001);
         var friendAfterRegistration = await GetStoredPlayerAsync(8003);
         var cards = await Database.GetCollection<Bonus>("bonuses").Find(bonus => bonus.PlayerId == inviter.Id).ToListAsync();
-        await Assert.That(code.Code).IsEqualTo((await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None)).Code);
+        await Assert.That(code.Code).IsEqualTo((await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None)).Code);
         await Assert.That(code.Code == other.Code).IsFalse();
         await Assert.That(inviterAfterRegistration["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
         await Assert.That(friendAfterRegistration["Wallet"]["Crystals"].AsInt32).IsEqualTo(11);
@@ -360,7 +360,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var inviterApi = Factory.CreateApiClient(8012);
         var inviter = await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
+        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
         for (long userId = 8013; userId <= 8016; userId++)
         {
             using var friendApi = Factory.CreateApiClient(userId);
@@ -520,7 +520,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
         foreach (var interest in new[] { false, true, true })
         {
-            var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = interest }, CancellationToken.None);
+            var response = await api.Bonus.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = interest }, CancellationToken.None);
             await Assert.That(response.Bonus).IsEqualTo(interest ? 0 : 5);
             var saved = await playerRepository.GetPlayerAsync(ExternalUserId.From($"telegram:{8402}"), CancellationToken.None)
                         ?? throw new InvalidOperationException("Missing player.");
@@ -532,7 +532,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         using var legacyApi = Factory.CreateApiClient(8403);
         await CreatePlayerWithWorldAsync(legacyApi);
-        await legacyApi.Player.ClaimPlusInterestAsync(null, CancellationToken.None);
+        await legacyApi.Bonus.ClaimPlusInterestAsync(null, CancellationToken.None);
         var legacyPlayer = await playerRepository.GetPlayerAsync(ExternalUserId.From($"telegram:{8403}"), CancellationToken.None)
                            ?? throw new InvalidOperationException("Missing player.");
         await Assert.That(legacyPlayer.PlusNotifyRequested).IsTrue();
@@ -627,7 +627,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             cancellationToken: CancellationToken.None);
 
         // Act
-        var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
+        var response = await api.Bonus.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
 
         // Assert
         await Assert.That(response.Bonus).IsEqualTo(alreadyClaimed ? 0 : 5);
@@ -733,7 +733,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var before = await GetStoredPlayerAsync(28405);
 
         // Act
-        var result = await api.Player.ExchangeEnergyAsync(CancellationToken.None);
+        var result = await api.Bonus.ExchangeEnergyAsync(CancellationToken.None);
         var after = await GetStoredPlayerAsync(28405);
 
         // Assert
@@ -759,7 +759,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var before = await GetStoredPlayerAsync(28406);
 
         // Act
-        var result = await api.Player.ExchangeEnergyAsync(CancellationToken.None);
+        var result = await api.Bonus.ExchangeEnergyAsync(CancellationToken.None);
         var wallet = await ReadWalletAsync(api);
         var after = await GetStoredPlayerAsync(28406);
 
@@ -780,9 +780,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await SetWalletAsync(28407, 1, 10);
 
         // Act
-        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => api.Player.ExchangeEnergyAsync(CancellationToken.None)));
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => api.Bonus.ExchangeEnergyAsync(CancellationToken.None)));
         var stored = await GetStoredPlayerAsync(28407);
-        var next = await api.Player.ExchangeEnergyAsync(CancellationToken.None);
+        var next = await api.Bonus.ExchangeEnergyAsync(CancellationToken.None);
 
         // Assert
         await Assert.That(results.Count(result => result.Exchanged)).IsEqualTo(1);

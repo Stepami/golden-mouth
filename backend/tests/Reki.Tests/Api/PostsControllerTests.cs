@@ -53,8 +53,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Act
-        var claimed = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
-        var repeated = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
+        var claimed = await api.Bonus.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
+        var repeated = await api.Bonus.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
 
         // Assert
         await Assert.That(claimed).IsTrue();
