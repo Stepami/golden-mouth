@@ -64,7 +64,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task CreatePost_FifthViralPostWithLevelUp_AwardsThreeCrystalsAsync()
+    public async Task CreatePost_FifthOrdinaryPostWithLevelUp_AwardsTwoCrystalsAsync()
     {
         // Arrange
         using var api = Factory.CreateApiClient(8302);
@@ -73,10 +73,26 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var otherWorld = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api, WorldTemplate.Academy), CancellationToken.None);
         var otherWorldId = otherWorld.Id.ToString();
         var source = await CreateSourceAsync(otherWorldId);
-        for (var number = 0; number < 4; number++)
-        {
-            await api.Posts.CreatePostAsync(otherWorldId, new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None);
-        }
+        var now = Factory.Session.Clock.GetUtcNow();
+        var authorId = player.Id.ToAuthorId();
+        await Database.GetCollection<GamePost>("posts").InsertManyAsync(Enumerable.Range(0, 4).Select(index =>
+            new GamePost(
+                PostId.New(now),
+                authorId,
+                WorldId.From(index % 2 == 0 ? worldId : otherWorldId),
+                player.Id,
+                "Обычный пост",
+                0,
+                0,
+                [],
+                [],
+                now,
+                0,
+                0,
+                1,
+                PostViralityStatus.None)));
+        await api.Posts.CreatePostAsync(otherWorldId, new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None);
+        await Database.GetCollection<Bonus>("bonuses").OfType<ViralCardBonus>().DeleteManyAsync(card => card.PlayerId == player.Id);
 
         await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == player.Id, Builders<PlayerProfile>.Update.Set("Skills.topic.Experience", 7d));
@@ -89,9 +105,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(post.Result.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard).IsTrue();
+        await Assert.That(post.Result.Virality is PostViralityStatus.None or PostViralityStatus.Viral).IsTrue();
         await Assert.That(after.Skills[SkillId.Topic].Level).IsEqualTo(2);
-        await Assert.That(after.EnergyWallet?.Crystals).IsEqualTo(13);
+        await Assert.That(after.EnergyWallet?.Crystals).IsEqualTo(12);
     }
 
     [Test]

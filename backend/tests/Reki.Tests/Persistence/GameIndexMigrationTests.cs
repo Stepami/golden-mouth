@@ -12,7 +12,6 @@ using OpenIddict.MongoDb;
 using OpenIddict.MongoDb.Models;
 using Reki.Application.Balance;
 using Reki.Domain.Bonuses;
-using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
@@ -72,6 +71,39 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That(cards.OfType<FlopGuardBonus>().Select(bonus => bonus.Adder)).IsEquivalentTo([10, 10, 10]);
             await Assert.That(cards.OfType<CrystalsBonus>()).IsEmpty();
         }
+
+        var invitations = database.GetCollection<BsonDocument>("invites");
+        var authorId = new BsonBinaryData(author.Value, GuidRepresentation.Standard);
+        var inactiveId = new BsonBinaryData(inactive.Value, GuidRepresentation.Standard);
+        await invitations.InsertManyAsync([
+            LegacyInvite(authorId, inactiveId, false, false, 7),
+            LegacyInvite(authorId, inactiveId, true, false, 4),
+            LegacyInvite(inactiveId, authorId, false, true, 9),
+            LegacyInvite(authorId, inactiveId, true, true, 9),
+            LegacyInvite(authorId, new BsonBinaryData(Guid.NewGuid(), GuidRepresentation.Standard), false, false, 9),
+        ]);
+        var referralMigration = MigratorBuilder.FromMongoClient(mongo.MongoClient, options)
+            .LoadMigrations([new MigratePostVirality()]).Build();
+        await referralMigration.MigrateAsync(cancellationToken: CancellationToken.None);
+        await referralMigration.MigrateAsync(cancellationToken: CancellationToken.None);
+
+        var migratedAuthor = await database.GetCollection<PlayerProfile>("players").Find(player => player.Id == author).SingleAsync();
+        var migratedInactive = await database.GetCollection<PlayerProfile>("players").Find(player => player.Id == inactive).SingleAsync();
+        await Assert.That(migratedAuthor.Wallet.Crystals).IsEqualTo(18);
+        await Assert.That(migratedInactive.Wallet.Crystals).IsEqualTo(20);
+        await Assert.That(await invitations.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+        var migratedBonuses = await bonuses.Find(FilterDefinition<Bonus>.Empty).ToListAsync();
+        foreach (var id in new[] { author, inactive })
+        {
+            await Assert.That(migratedBonuses.OfType<ViralCardBonus>().Count(card => card.PlayerId == id)).IsEqualTo(6);
+            await Assert.That(migratedBonuses.OfType<FlopGuardBonus>().Count(card => card.PlayerId == id)).IsEqualTo(6);
+        }
+
+        static BsonDocument LegacyInvite(BsonValue inviterId, BsonValue inviteeId, bool inviterUsed, bool inviteeUsed, int amount) => new()
+        {
+            ["InviterId"] = inviterId, ["InviteeId"] = inviteeId, ["InviterBonusUsed"] = inviterUsed,
+            ["InviteeBonusUsed"] = inviteeUsed, ["BonusAmount"] = amount,
+        };
 
         static BsonDocument LegacyPlayer(PlayerId id, int crystals)
         {
@@ -614,7 +646,15 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         };
         await database.GetCollection<BsonDocument>("challenges")
             .InsertOneAsync(challenge, cancellationToken: CancellationToken.None);
-        var invitation = Invitation.Create(PlayerId.New(), PlayerId.New(), CreatedAt, 5).ToBsonDocument();
+        var invitation = new BsonDocument
+        {
+            ["_id"] = new BsonBinaryData(Guid.NewGuid(), GuidRepresentation.Standard),
+            ["InviterId"] = new BsonBinaryData(Guid.NewGuid(), GuidRepresentation.Standard),
+            ["InviteeId"] = new BsonBinaryData(Guid.NewGuid(), GuidRepresentation.Standard),
+            ["CreatedAtUtc"] = ReferralTimestamp(CreatedAt),
+            ["InviterBonusUsed"] = false, ["InviteeBonusUsed"] = false, ["BonusAmount"] = 5,
+            ["InviterBonusUsedAtUtc"] = BsonNull.Value, ["InviteeBonusUsedAtUtc"] = BsonNull.Value,
+        };
         await database.GetCollection<BsonDocument>("invites").InsertManyAsync(new[]
         {
             invitation,
@@ -1442,9 +1482,16 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         ["InviteBonusesEarnedInPeriod"] = count,
     };
 
-    private static BsonValue ReferralTimestamp(DateTimeOffset value) =>
-        Invitation.Create(PlayerId.New(), PlayerId.New(), value, 0)
-            .ToBsonDocument()["CreatedAtUtc"];
+    private static BsonValue ReferralTimestamp(DateTimeOffset value)
+    {
+        var document = new BsonDocument();
+        using var writer = new MongoDB.Bson.IO.BsonDocumentWriter(document);
+        writer.WriteStartDocument();
+        writer.WriteName("value");
+        BsonSerializer.LookupSerializer<DateTimeOffset>().Serialize(BsonSerializationContext.CreateRoot(writer), value);
+        writer.WriteEndDocument();
+        return document["value"];
+    }
 
     private static async Task AssertDocumentArraysAsync(IMongoDatabase database, string collectionName, IReadOnlyList<string> fields)
     {
