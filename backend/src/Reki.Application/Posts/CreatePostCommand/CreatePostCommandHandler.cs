@@ -3,7 +3,6 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
-using Reki.Application.Invites;
 using Reki.Application.Player;
 using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
@@ -13,7 +12,6 @@ using Reki.Application.Posts.Responses.PostResult;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
-using Reki.Domain.Bonuses;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -26,10 +24,9 @@ internal sealed class CreatePostCommandHandler(
     IWorldRepository worlds,
     IWorldPlayerCache worldCache,
     IPostRepository posts,
-    IInvitationRepository invitationRepository,
-    IBonusRepository bonuses,
     IOptionsMonitor<GameBalance> balance,
     PostProgressionCalculator progressionCalculator,
+    PostCrystalsCalculator postCrystalsCalculator,
     IRekiContextAccessor contextAccessor,
     PlayerSafetyGuard safety,
     TimeProvider timeProvider,
@@ -72,59 +69,44 @@ internal sealed class CreatePostCommandHandler(
             PostViralityStatus.None,
             repostId: command.RepostId);
 
-        var previousSkillLevels = player.Skills.ToDictionary(item => item.Key, item => item.Value.Level);
-        var previousAchievements = world.Player.Achievements.Where(item => item.IsOpen).Select(item => item.Id).ToHashSet();
+        var previousSkillLevels = player.Skills.ToDictionary(
+            item => item.Key,
+            item => item.Value.Level);
+        HashSet<string> previousAchievements =
+        [
+            .. world.Player.Achievements
+                .Where(item => item.IsOpen)
+                .Select(item => item.Id),
+        ];
+
         var progression = await unitOfWork.ExecuteAsync(
             async token =>
             {
-                var result = await progressionCalculator.CalculateAsync(player, world, post, command.OwnWords, token);
-                post.ApplyProgress(result);
-                world.PublishPost(result);
-                var crystals = result.Skills.Sum(item => Math.Max(0, item.Value.Level - player.Skills[item.Key].Level));
-                var hitOwnMilestone = player.HitOwnWorldMilestone || world.Player.Subscribers >= currentBalance.OwnWorldSubscribers;
-                player.SpendPost(result.Skills, currentBalance.PostEnergyCost, now, hitOwnMilestone);
-                var publicationNumber = await posts.CountPostsAsync(player.Id, token) + 1;
-                if (publicationNumber % 5 == 0)
-                {
-                    crystals++;
-                }
+                var progression = await progressionCalculator.CalculateAsync(player, world, post, command.OwnWords, token);
+                post.ApplyProgress(progression);
+                world.PublishPost(progression);
 
-                var invite = publicationNumber == 1
-                    ? await invitationRepository.GetPendingInviteAsync(player.Id, token)
-                    : null;
-                player.ReplenishCrystals(crystals + ((post.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? 1 : 0) + (invite?.BonusAmount ?? 0));
+                var hitOwnMilestone = player.HitOwnWorldMilestone || world.Player.Subscribers >= currentBalance.OwnWorldSubscribers;
+                player.SpendPost(progression.Skills, currentBalance.PostEnergyCost, now, hitOwnMilestone);
+
                 await players.ReplacePlayerAsync(player, token);
                 await worlds.ReplaceWorldAsync(world, token);
-                if (invite is not null)
-                {
-                    var inviter = invite.InviterBonusUsed ? null : await players.GetPlayerAsync(invite.InviterId, token);
-                    if (inviter is not null)
-                    {
-                        await players.ReplacePlayerAsync(inviter.AwardReferral(), token);
-                        await bonuses.InsertBonusesAsync(
-                            [
-                                new FlopGuardBonus(BonusId.New(), inviter.Id, 10),
-                                new FlopGuardBonus(BonusId.New(), inviter.Id, 10),
-                                new FlopGuardBonus(BonusId.New(), inviter.Id, 10),
-                                new ViralCardBonus(BonusId.New(), inviter.Id, 5),
-                                new ViralCardBonus(BonusId.New(), inviter.Id, 5),
-                                new ViralCardBonus(BonusId.New(), inviter.Id, 5),
-                            ],
-                            token);
-                    }
-
-                    await invitationRepository.UseInviteBonusAsync(invite.UseInviteeBonus(now).UseInviterBonus(now), token);
-                }
-
                 await posts.InsertPostAsync(post, token);
-                return result;
+
+                var publicationNumber = await posts.CountPostsAsync(player.Id, token);
+                var crystals = postCrystalsCalculator.GetBonus(post, publicationNumber, progression.LevelChange);
+                player.ReplenishCrystals(crystals);
+                await players.ReplacePlayerAsync(player, token);
+
+                return progression;
             },
             _ => worldCache.UpdateWorld(world),
             cancellationToken);
+
         telemetry.TrackWorldAudience(world);
         TrackProgression(previousSkillLevels, previousAchievements, player, world, post, progression.Score, telemetry);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
-        var headline = (post.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? "Пост залетел" : "Канал растёт";
+
         var reason = progression.Score.FlopReason switch
         {
             "angry_abuse" => "Агрессивные оскорбления",
@@ -133,30 +115,37 @@ internal sealed class CreatePostCommandHandler(
             "anxious_tone" => "Тревожный тон",
             _ => null,
         };
-        var whys = new List<WhyResponse>();
-        if (reason is not null)
-        {
-            whys.Add(new WhyResponse("🤔", reason, post.SubscriberDelta.ToString(CultureInfo.InvariantCulture)));
-        }
 
-        whys.Add(
+        List<WhyResponse> whys =
+        [
+            .. reason is null
+                ? Array.Empty<WhyResponse>()
+                : [new WhyResponse("🤔", reason, post.SubscriberDelta.ToString(CultureInfo.InvariantCulture))],
             progression.Score.Topic > 0
                 ? new WhyResponse("🎯", "В тему", string.Empty)
-                : new WhyResponse("👎", "Не в тему", string.Empty));
+                : new WhyResponse("👎", "Не в тему", string.Empty),
+        ];
 
-        var result = new PostResultResponse(
+        var postResultResponse = new PostResultResponse(
             post.Id,
             post.SubscriberDelta,
-            post.Virality == PostViralityStatus.Flop ? "Аудитория сократилась" : headline,
+            post.Virality switch
+            {
+                PostViralityStatus.Flop => "Аудитория сократилась",
+                PostViralityStatus.Viral => "Пост залетел",
+                PostViralityStatus.FlopGuard => "Сработала защита от отписок",
+                PostViralityStatus.ViralCard => "Сработал бонус залёта",
+                _ => "Канал растёт",
+            },
             whys,
-            (post.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? [new RibbonResponse("🚀", "залёт", null)] : [],
+            RibbonResponse.Create(post.Virality),
             null,
             post.Virality,
             post.Views);
 
         return new CreatePostResponse(
             post.MapPost(world, player.Id),
-            result,
+            postResultResponse,
             progression.Commenter.ToAuthorId());
     }
 

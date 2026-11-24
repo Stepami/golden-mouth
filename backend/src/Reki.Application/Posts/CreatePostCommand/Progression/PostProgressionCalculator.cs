@@ -33,12 +33,16 @@ internal sealed class PostProgressionCalculator(
         var (views, likes) = postNumbersCalculator.Calculate(gameWorld, result);
         var subscriberDelta = subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, result);
         var skills = AddSkillExperience(player, post, turn, ownWords);
+        var levelChange = skills.ToDictionary(
+            item => item.Key,
+            item => item.Value.Level > player.Skills[item.Key].Level);
 
         return new PostProgression(
             subscriberDelta,
             turn.Quality,
             result.Virality,
             skills,
+            levelChange,
             views,
             likes,
             starId,

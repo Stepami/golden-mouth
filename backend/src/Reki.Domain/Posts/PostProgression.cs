@@ -8,6 +8,7 @@ public sealed record PostProgression(
     double Quality,
     PostViralityStatus Virality,
     IReadOnlyDictionary<SkillId, SkillProgress> Skills,
+    IReadOnlyDictionary<SkillId, bool> LevelChange,
     long Views,
     long Likes,
     StarId Commenter,

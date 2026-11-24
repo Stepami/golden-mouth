@@ -125,7 +125,12 @@ internal sealed class MongoPostRepository(
     {
         var authorId = playerId.ToAuthorId();
         return await _posts.CountDocumentsAsync(
-            post => post.OwnerId == playerId && post.AuthorId == authorId,
+            sessionProvider.Session,
+            post =>
+                post.OwnerId == playerId &&
+                post.AuthorId == authorId &&
+                post.Virality == PostViralityStatus.None &&
+                post.RepostId == null,
             cancellationToken: cancellationToken);
     }
 
