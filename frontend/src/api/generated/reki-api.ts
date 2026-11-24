@@ -2205,12 +2205,13 @@ export interface PostResultResponse {
     whys: WhyResponse[];
     ribbons: RibbonResponse[];
     bestComment: BestCommentResponse | null;
-    viral: boolean;
-    flop: boolean;
+    virality: PostViralityStatus;
     views: number;
 
     [key: string]: any;
 }
+
+export type PostViralityStatus = "none" | "viral" | "flop" | "viralCard" | "flopGuard";
 
 export interface ProblemDetails {
     type?: string | null;

@@ -117,6 +117,7 @@ namespace Reki.Api.Serialization;
     Converters =
     [
         typeof(JsonStringEnumConverter<AddressType>),
+        typeof(CamelCaseEnumConverter<PostViralityStatus>),
         typeof(CamelCaseEnumConverter<WorldDrama>),
         typeof(CamelCaseEnumConverter<WorldDifficulty>),
         typeof(CamelCaseEnumConverter<FeedItemKind>),

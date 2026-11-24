@@ -69,8 +69,7 @@ internal sealed class CreatePostCommandHandler(
             0,
             0,
             1,
-            false,
-            false,
+            PostViralityStatus.None,
             repostId: command.RepostId);
 
         var previousSkillLevels = player.Skills.ToDictionary(item => item.Key, item => item.Value.Level);
@@ -93,7 +92,7 @@ internal sealed class CreatePostCommandHandler(
                 var invite = publicationNumber == 1
                     ? await invitationRepository.GetPendingInviteAsync(player.Id, token)
                     : null;
-                player.ReplenishCrystals(crystals + (post.Viral ? 1 : 0) + (invite?.BonusAmount ?? 0));
+                player.ReplenishCrystals(crystals + ((post.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? 1 : 0) + (invite?.BonusAmount ?? 0));
                 await players.ReplacePlayerAsync(player, token);
                 await worlds.ReplaceWorldAsync(world, token);
                 if (invite is not null)
@@ -125,7 +124,7 @@ internal sealed class CreatePostCommandHandler(
         telemetry.TrackWorldAudience(world);
         TrackProgression(previousSkillLevels, previousAchievements, player, world, post, progression.Score, telemetry);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
-        var headline = post.Viral ? "Пост залетел" : "Канал растёт";
+        var headline = (post.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? "Пост залетел" : "Канал растёт";
         var reason = progression.Score.FlopReason switch
         {
             "angry_abuse" => "Агрессивные оскорбления",
@@ -148,12 +147,11 @@ internal sealed class CreatePostCommandHandler(
         var result = new PostResultResponse(
             post.Id,
             post.SubscriberDelta,
-            post.Flop ? "Аудитория сократилась" : headline,
+            post.Virality == PostViralityStatus.Flop ? "Аудитория сократилась" : headline,
             whys,
-            post.Viral ? [new RibbonResponse("🚀", "залёт", null)] : [],
+            (post.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? [new RibbonResponse("🚀", "залёт", null)] : [],
             null,
-            post.Viral,
-            post.Flop,
+            post.Virality,
             post.Views);
 
         return new CreatePostResponse(

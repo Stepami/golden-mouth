@@ -114,7 +114,7 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         await Assert.That(finishedCard.Values[firstWorld][DailyTaskType.Reposts].Progress).IsEqualTo(repostTarget);
         var publicationReward = (priorPosts + 1) % 5 == 0 ? 1 : 0;
         await Assert.That(finishedWallet - beforeFinish.EnergyWallet?.Crystals).IsEqualTo(publicationReward + 2);
-        await Assert.That(afterFinishWallet - finishedWallet).IsEqualTo(nextPost.Result.Viral ? 1 : 0);
+        await Assert.That(afterFinishWallet - finishedWallet).IsEqualTo((nextPost.Result.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? 1 : 0);
         await Assert.That(afterFinish.Values[secondWorld][DailyTaskType.Posts].Progress).IsEqualTo(1L);
         await Assert.That(afterDelete.Values.ContainsKey(firstWorld)).IsFalse();
         await Assert.That(afterDelete.Completion[DailyTaskType.Posts]).IsTrue();

@@ -22,8 +22,7 @@ public sealed class GamePost
         long subscriberDelta,
         double quality,
         double reachRatio,
-        bool viral,
-        bool flop,
+        PostViralityStatus virality,
         int version = 0,
         AuthorId? predictedAuthorId = null,
         string? flopReason = null,
@@ -44,8 +43,7 @@ public sealed class GamePost
         SubscriberDelta = subscriberDelta;
         Quality = quality;
         ReachRatio = reachRatio;
-        Viral = viral;
-        Flop = flop;
+        Virality = virality;
         Version = version;
         PredictedAuthorId = predictedAuthorId;
         FlopReason = flopReason;
@@ -78,9 +76,7 @@ public sealed class GamePost
 
     public double ReachRatio { get; private set; }
 
-    public bool Viral { get; private set; }
-
-    public bool Flop { get; private set; }
+    public PostViralityStatus Virality { get; private set; }
 
     public int Version { get; private set; }
 
@@ -154,7 +150,7 @@ public sealed class GamePost
     {
         var predictedAuthorId = progression.Commenter.ToAuthorId();
         if (SubscriberDelta == progression.SubscriberDelta && Quality.CompareTo(progression.Quality) == 0 &&
-            Viral == progression.Viral && Flop == progression.Flop && Views == progression.Views &&
+            Virality == progression.Virality && Views == progression.Views &&
             Likes == progression.Likes && PredictedAuthorId == predictedAuthorId && FlopReason == progression.Score.FlopReason)
         {
             return;
@@ -162,8 +158,7 @@ public sealed class GamePost
 
         SubscriberDelta = progression.SubscriberDelta;
         Quality = progression.Quality;
-        Viral = progression.Viral;
-        Flop = progression.Flop;
+        Virality = progression.Virality;
         Views = progression.Views;
         Likes = progression.Likes;
         PredictedAuthorId = predictedAuthorId;

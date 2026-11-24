@@ -59,7 +59,7 @@ internal sealed class GenerateStarFeedOnFeedOpenedJob(
         }
 
         var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(createdAtUnixMilliseconds);
-        var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, playerId, text, 0, 0, [], [], createdAt, 0, 0, 1, false, false);
+        var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, playerId, text, 0, 0, [], [], createdAt, 0, 0, 1, PostViralityStatus.None);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }
 }

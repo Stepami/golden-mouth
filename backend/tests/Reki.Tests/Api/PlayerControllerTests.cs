@@ -22,6 +22,7 @@ using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Streaks;
+using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using TUnit.Assertions.Enums;
@@ -409,7 +410,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
         await Assert.That(storedFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(8);
         await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
-        var friendViralPosts = (firstPost.Result.Viral ? 1 : 0) + (secondPost.Result.Viral ? 1 : 0);
+        var friendViralPosts = ((firstPost.Result.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? 1 : 0) + ((secondPost.Result.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? 1 : 0);
         await Assert.That(storedFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(11 + friendViralPosts);
         var invite = await GetStoredInviteAsync(storedFriend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
@@ -435,7 +436,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         {
             using var friendApi = Factory.CreateApiClient(friendUserId);
             await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-            lastPostWentViral = (await PublishAsync(friendUserId, "первый пост друга")).Result.Viral;
+            lastPostWentViral = (await PublishAsync(friendUserId, "первый пост друга")).Result.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard;
         }
 
         var inviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
@@ -485,7 +486,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         var published = await PublishAsync(8561, "пост с существующим бонусом");
 
-        var expectedCrystals = (alreadyUsed ? 10 : 11) + (published.Result.Viral ? 1 : 0);
+        var expectedCrystals = (alreadyUsed ? 10 : 11) + ((published.Result.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard) ? 1 : 0);
         await Assert.That((await GetStoredPlayerAsync(8560))["Wallet"]["Energy"].AsInt32).IsEqualTo(4);
         await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Energy"].AsInt32).IsEqualTo(3);
         await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Crystals"].AsInt32)

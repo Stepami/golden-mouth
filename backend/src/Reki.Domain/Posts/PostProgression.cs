@@ -6,8 +6,7 @@ namespace Reki.Domain.Posts;
 public sealed record PostProgression(
     long SubscriberDelta,
     double Quality,
-    bool Viral,
-    bool Flop,
+    PostViralityStatus Virality,
     IReadOnlyDictionary<SkillId, SkillProgress> Skills,
     long Views,
     long Likes,

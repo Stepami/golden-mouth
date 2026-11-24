@@ -188,9 +188,13 @@ export function Live() {
       await new Promise(resolve => setTimeout(resolve, 1300))
       if (!active) return
       setTyping(null)
-      track('post_result', { delta: created.result.delta, viral: created.result.viral, flop: created.result.flop, publication_kind: nav.params.repostId ? text.length ? 'quote' : 'repost' : 'post' })
       const result = created.result
-      nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, dailyBaseline, commentPromise, predictedAuthorId: created.predictedAuthorId })
+      track('post_result', { delta: result.delta, virality: result.virality, publication_kind: nav.params.repostId ? text.length ? 'quote' : 'repost' : 'post' })
+      const screen = {
+        none: '02-3_result', viral: '02-5_viral', flop: '02-4_flop',
+        viralCard: '02-5_viral', flopGuard: '02-3_result',
+      }[result.virality]
+      nav.replace(screen, { result, post: created.post, dailyBaseline, commentPromise, predictedAuthorId: created.predictedAuthorId })
     })() }, 0)
     return () => { active = false; clearTimeout(start) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

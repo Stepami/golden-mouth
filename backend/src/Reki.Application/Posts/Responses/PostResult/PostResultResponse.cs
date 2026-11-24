@@ -9,7 +9,6 @@ public sealed record PostResultResponse(
     IReadOnlyList<WhyResponse> Whys,
     IReadOnlyList<RibbonResponse> Ribbons,
     BestCommentResponse? BestComment,
-    bool Viral,
-    bool Flop,
+    PostViralityStatus Virality,
     long Views);
 

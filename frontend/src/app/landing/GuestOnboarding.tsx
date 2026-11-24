@@ -320,7 +320,7 @@ export function GuestOnboarding({ worldId, onSave }: {
   })
   if (replyDone) post.comments.push({ ...firstComment, id: 'guest-second', parentCommentId: 'guest-reply', depth: 2, text: speaker.second })
   const result: PostResult = {
-    postId: post.id, delta: 4, views: post.views, headline: 'Персонаж заметил твой первый пост.', viral: false, flop: false,
+    postId: post.id, delta: 4, views: post.views, headline: 'Персонаж заметил твой первый пост.', virality: 'none',
     whys: [{ icon: '⭐', label: 'Герой заметил пост', value: '+4' }], ribbons: [],
   }
   useLayoutEffect(() => {

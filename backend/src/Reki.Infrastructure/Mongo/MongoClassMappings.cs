@@ -194,6 +194,7 @@ internal static partial class MongoClassMappings
             classMap.MapMember(item => item.LikedBy).SetDefaultValue(Array.Empty<AuthorId>());
             classMap.MapMember(item => item.Comments).SetDefaultValue(Array.Empty<GameComment>());
             classMap.MapMember(item => item.Likes).SetDefaultValue(0L);
+            classMap.MapMember(item => item.Virality).SetDefaultValue(PostViralityStatus.None);
             classMap.MapMember(item => item.Version).SetDefaultValue(0);
             classMap.MapMember(item => item.PredictedAuthorId).SetDefaultValue((object?)null);
             classMap.MapMember(item => item.FlopReason).SetDefaultValue((object?)null);
@@ -212,8 +213,7 @@ internal static partial class MongoClassMappings
                     item.SubscriberDelta,
                     item.Quality,
                     item.ReachRatio,
-                    item.Viral,
-                    item.Flop,
+                    item.Virality,
                     item.Version,
                     item.PredictedAuthorId,
                     item.FlopReason,

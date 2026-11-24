@@ -9,7 +9,7 @@ public sealed record StoryCardData(
     string PostText,
     long Views,
     long SubscriberDelta,
-    bool Viral)
+    PostViralityStatus Virality)
 {
     public static StoryCardData From(Domain.Worlds.World player, GamePost post) => new(
         player.Player.Name,
@@ -18,5 +18,5 @@ public sealed record StoryCardData(
         post.Text,
         post.Views,
         post.SubscriberDelta,
-        post.Viral);
+        post.Virality);
 }
