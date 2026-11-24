@@ -114,9 +114,11 @@ dotnet_diagnostic.AV1580.severity = none
 dotnet_diagnostic.AV1745.severity = none
 dotnet_diagnostic.VSTHRD003.severity = none
 dotnet_diagnostic.VSTHRD103.severity = none
+dotnet_diagnostic.SA1118.severity = none
 dotnet_diagnostic.SA1611.severity = none
 dotnet_diagnostic.SA1615.severity = none
 dotnet_diagnostic.SA1623.severity = none
+dotnet_diagnostic.S2325.severity = none
 dotnet_diagnostic.S3263.severity = none
 dotnet_diagnostic.S6960.severity = none
 
@@ -131,9 +133,6 @@ dotnet_diagnostic.SA1649.severity = none
 [src/Reki.Infrastructure/Mongo/Migrations/*.cs]
 # Migration filenames include their version; class names remain stable for migration history.
 dotnet_diagnostic.SA1649.severity = none
-
-[src/Reki.Application/Posts/AI/**/*.cs]
-dotnet_diagnostic.SA1118.severity = none
 
 [src/Reki.Domain/Worlds/StarTrait.cs]
 dotnet_diagnostic.AV1115.severity = none

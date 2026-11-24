@@ -218,7 +218,6 @@ export const api = {
         api.clearSession();
     },
     loadWorldTemplates: loadTemplates,
-    invitation: async (signal?: AbortSignal): Promise<number> => Number((await data(sdk.invitation.getInvitation(signal))).bonus),
     restore: (): Promise<Player | undefined> => loadPlayer(),
     me: (worldId?: string): Promise<Player> => {
         const key = worldId ?? sessionPlayer?.worldInstanceId ?? '';
@@ -239,8 +238,8 @@ export const api = {
         if (response.status !== 200) throw new Error('Web Push registration was not confirmed');
         return response;
     })),
-    exchangeEnergy: async () => data(sdk.player.exchangeEnergy()),
-    claimOnboardingBonus: (postId: string, signal?: AbortSignal): Promise<boolean> => data(sdk.posts.claimOnboardingBonus(postId, signal)),
+    exchangeEnergy: async () => data(sdk.bonus.exchangeEnergy()),
+    claimOnboardingBonus: (postId: string, signal?: AbortSignal): Promise<boolean> => data(sdk.bonus.claimOnboardingBonus(postId, signal)),
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
     onboardingProfile: () => sessionIdentity,
@@ -337,11 +336,11 @@ export const api = {
     plusInterest: async (interest = true): Promise<{
         bonus: number;
     }> => {
-        return data(sdk.player.claimPlusInterest({ interest })).then(value => ({ bonus: Number(value.bonus) }));
+        return data(sdk.bonus.claimPlusInterest({ interest })).then(value => ({ bonus: Number(value.bonus) }));
     },
     referral: (): Promise<{
         code: string;
-    }> => data(sdk.invitation.getReferralCode()),
+    }> => data(sdk.player.getReferralCode()),
     settings: async (patch: Partial<Player['settings']> & {
         address?: Player['address'];
     }) => {

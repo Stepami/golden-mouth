@@ -145,6 +145,173 @@ export class AuthClient {
     }
 }
 
+export class BonusClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    claimPlusInterest(body?: PlusInterestRequest | null | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PlusInterestResponse>> {
+        let url_ = this.baseUrl + "/bonus/plus-interest";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processClaimPlusInterest(_response);
+        });
+    }
+
+    protected processClaimPlusInterest(response: Response): Promise<SwaggerResponse<PlusInterestResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlusInterestResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<PlusInterestResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
+    exchangeEnergy(signal?: AbortSignal): Promise<SwaggerResponse<EnergyExchangeResponse>> {
+        let url_ = this.baseUrl + "/bonus/exchange-energy";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processExchangeEnergy(_response);
+        });
+    }
+
+    protected processExchangeEnergy(response: Response): Promise<SwaggerResponse<EnergyExchangeResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as EnergyExchangeResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<EnergyExchangeResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
+    claimOnboardingBonus(postId: string, signal?: AbortSignal): Promise<SwaggerResponse<boolean>> {
+        let url_ = this.baseUrl + "/bonus/onboarding/{postId}";
+        if (postId === undefined || postId === null)
+            throw new globalThis.Error("The parameter 'postId' must be defined.");
+        url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processClaimOnboardingBonus(_response);
+        });
+    }
+
+    protected processClaimOnboardingBonus(response: Response): Promise<SwaggerResponse<boolean>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as boolean;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<boolean>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
+    claimBooster(signal?: AbortSignal): Promise<SwaggerResponse<boolean>> {
+        let url_ = this.baseUrl + "/bonus/booster";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processClaimBooster(_response);
+        });
+    }
+
+    protected processClaimBooster(response: Response): Promise<SwaggerResponse<boolean>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as boolean;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<boolean>>(new SwaggerResponse(status, _headers, null as any));
+    }
+}
+
 export class ExternalAuthClient {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
@@ -328,91 +495,6 @@ export class ExternalAuthClient {
     }
 }
 
-export class InvitationClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    /**
-     * @return OK
-     */
-    getInvitation(signal?: AbortSignal): Promise<SwaggerResponse<InvitationResponse>> {
-        let url_ = this.baseUrl + "/invitation";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetInvitation(_response);
-        });
-    }
-
-    protected processGetInvitation(response: Response): Promise<SwaggerResponse<InvitationResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as InvitationResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<InvitationResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
-    getReferralCode(signal?: AbortSignal): Promise<SwaggerResponse<ReferralResponse>> {
-        let url_ = this.baseUrl + "/referral";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetReferralCode(_response);
-        });
-    }
-
-    protected processGetReferralCode(response: Response): Promise<SwaggerResponse<ReferralResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ReferralResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<ReferralResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-}
-
 export class PlayerClient {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
@@ -535,45 +617,8 @@ export class PlayerClient {
     /**
      * @return OK
      */
-    exchangeEnergy(signal?: AbortSignal): Promise<SwaggerResponse<EnergyExchangeResponse>> {
-        let url_ = this.baseUrl + "/me/energy/exchange";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processExchangeEnergy(_response);
-        });
-    }
-
-    protected processExchangeEnergy(response: Response): Promise<SwaggerResponse<EnergyExchangeResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as EnergyExchangeResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<EnergyExchangeResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
     updateSettings(body: UpdateSettingsRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
-        let url_ = this.baseUrl + "/settings";
+        let url_ = this.baseUrl + "/me/settings";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(body);
@@ -648,52 +693,10 @@ export class PlayerClient {
     }
 
     /**
-     * @param body (optional) 
-     * @return OK
-     */
-    claimPlusInterest(body?: PlusInterestRequest | null | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PlusInterestResponse>> {
-        let url_ = this.baseUrl + "/plus-interest";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            signal,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processClaimPlusInterest(_response);
-        });
-    }
-
-    protected processClaimPlusInterest(response: Response): Promise<SwaggerResponse<PlusInterestResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlusInterestResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<PlusInterestResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
      * @return OK
      */
     mergePlayers(body: MergePlayersRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
-        let url_ = this.baseUrl + "/merge";
+        let url_ = this.baseUrl + "/me/merge";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(body);
@@ -739,26 +742,12 @@ export class PlayerClient {
         }
         return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
-}
-
-export class PostsClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
 
     /**
      * @return OK
      */
-    claimOnboardingBonus(postId: string, signal?: AbortSignal): Promise<SwaggerResponse<boolean>> {
-        let url_ = this.baseUrl + "/posts/onboarding-bonus/{postId}";
-        if (postId === undefined || postId === null)
-            throw new globalThis.Error("The parameter 'postId' must be defined.");
-        url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
+    getReferralCode(signal?: AbortSignal): Promise<SwaggerResponse<ReferralResponse>> {
+        let url_ = this.baseUrl + "/me/referral";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -770,17 +759,17 @@ export class PostsClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processClaimOnboardingBonus(_response);
+            return this.processGetReferralCode(_response);
         });
     }
 
-    protected processClaimOnboardingBonus(response: Response): Promise<SwaggerResponse<boolean>> {
+    protected processGetReferralCode(response: Response): Promise<SwaggerResponse<ReferralResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as boolean;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ReferralResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
@@ -788,7 +777,18 @@ export class PostsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SwaggerResponse<boolean>>(new SwaggerResponse(status, _headers, null as any));
+        return Promise.resolve<SwaggerResponse<ReferralResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+}
+
+export class PostsClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
     }
 
     /**
@@ -2101,12 +2101,6 @@ export interface GenerateReplyRequest {
     [key: string]: any;
 }
 
-export interface InvitationResponse {
-    bonus: number;
-
-    [key: string]: any;
-}
-
 export type LaunchSurface = "unknown" | "telegram-mini-app" | "browser" | "standalone";
 
 export interface LikePostRequest {
@@ -2205,12 +2199,13 @@ export interface PostResultResponse {
     whys: WhyResponse[];
     ribbons: RibbonResponse[];
     bestComment: BestCommentResponse | null;
-    viral: boolean;
-    flop: boolean;
+    virality: PostViralityStatus;
     views: number;
 
     [key: string]: any;
 }
+
+export type PostViralityStatus = "none" | "viral" | "flop" | "viralCard" | "flopGuard";
 
 export interface ProblemDetails {
     type?: string | null;

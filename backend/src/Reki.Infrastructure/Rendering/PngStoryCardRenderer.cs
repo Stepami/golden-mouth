@@ -1,5 +1,6 @@
 using System.Globalization;
 using Reki.Application.Posts.GetPublicStoryCard;
+using Reki.Domain.Posts;
 using SkiaSharp;
 
 namespace Reki.Infrastructure.Rendering;
@@ -207,7 +208,7 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
         canvas.DrawRoundRect(new SKRect(70, 730, 1010, 1450), 42, 42, cardPaint);
         DrawText(
             canvas,
-            card.Viral ? "ЗАЛЕТЕВШИЙ ПОСТ" : "ПОСТ",
+            card.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard ? "ЗАЛЕТЕВШИЙ ПОСТ" : "ПОСТ",
             30,
             _boldTypeface,
             new SKColor(155, 184, 255),

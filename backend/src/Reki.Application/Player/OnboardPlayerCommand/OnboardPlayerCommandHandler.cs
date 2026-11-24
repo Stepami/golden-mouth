@@ -2,11 +2,9 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
-using Reki.Application.Invites;
 using Reki.Application.Player.UpdateLastSeenAtCommand;
 using Reki.Application.Telemetry;
 using Reki.Domain.Bonuses;
-using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 
@@ -14,7 +12,6 @@ namespace Reki.Application.Player.OnboardPlayerCommand;
 
 internal sealed class OnboardPlayerCommandHandler(
     IUnitOfWork unitOfWork,
-    IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
     IBonusRepository bonuses,
     ISender sender,
@@ -59,7 +56,6 @@ internal sealed class OnboardPlayerCommandHandler(
         await unitOfWork.ExecuteAsync(
             async token =>
             {
-                await playerRepository.CreatePlayerAsync(completed, token);
                 await bonuses.InsertBonusesAsync(
                     [
                         new ViralCardBonus(BonusId.New(), playerId, 5),
@@ -69,15 +65,21 @@ internal sealed class OnboardPlayerCommandHandler(
                     token);
                 if (inviter is not null)
                 {
-                    var invite = Invitation.Create(
-                        inviter.Id,
-                        completed.Id,
-                        timeProvider.GetUtcNow(),
-                        currentBalance.InviteBonusBoth);
-                    await invitationRepository.CreateInviteAsync(invite, token);
+                    completed.ReplenishCrystals(currentBalance.InviteBonusBoth);
+                    await playerRepository.ReplacePlayerAsync(inviter.AwardReferral(), token);
+                    await bonuses.InsertBonusesAsync(
+                        [
+                            new FlopGuardBonus(BonusId.New(), inviter.Id, 10),
+                            new FlopGuardBonus(BonusId.New(), inviter.Id, 10),
+                            new ViralCardBonus(BonusId.New(), inviter.Id, 5),
+                            new ViralCardBonus(BonusId.New(), inviter.Id, 5),
+                        ],
+                        token);
                 }
 
-                return true;
+                await playerRepository.CreatePlayerAsync(completed, token);
+
+                return Unit.Value;
             },
             cancellationToken);
         await sender.Send(new UpdateLastSeenAt(completed), cancellationToken);

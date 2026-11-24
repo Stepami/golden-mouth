@@ -48,14 +48,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             0,
             0,
             1,
-            false,
-            false);
+            PostViralityStatus.None);
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(post);
         var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Act
-        var claimed = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
-        var repeated = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
+        var claimed = await api.Bonus.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
+        var repeated = await api.Bonus.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
 
         // Assert
         await Assert.That(claimed).IsTrue();
@@ -65,7 +64,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task CreatePost_FifthViralPostWithLevelUp_AwardsThreeCrystalsAsync()
+    public async Task CreatePost_FifthOrdinaryPostWithLevelUp_AwardsTwoCrystalsAsync()
     {
         // Arrange
         using var api = Factory.CreateApiClient(8302);
@@ -74,10 +73,26 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var otherWorld = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api, WorldTemplate.Academy), CancellationToken.None);
         var otherWorldId = otherWorld.Id.ToString();
         var source = await CreateSourceAsync(otherWorldId);
-        for (var number = 0; number < 4; number++)
-        {
-            await api.Posts.CreatePostAsync(otherWorldId, new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None);
-        }
+        var now = Factory.Session.Clock.GetUtcNow();
+        var authorId = player.Id.ToAuthorId();
+        await Database.GetCollection<GamePost>("posts").InsertManyAsync(Enumerable.Range(0, 4).Select(index =>
+            new GamePost(
+                PostId.New(now),
+                authorId,
+                WorldId.From(index % 2 == 0 ? worldId : otherWorldId),
+                player.Id,
+                "Обычный пост",
+                0,
+                0,
+                [],
+                [],
+                now,
+                0,
+                0,
+                1,
+                PostViralityStatus.None)));
+        await api.Posts.CreatePostAsync(otherWorldId, new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None);
+        await Database.GetCollection<Bonus>("bonuses").OfType<ViralCardBonus>().DeleteManyAsync(card => card.PlayerId == player.Id);
 
         await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == player.Id, Builders<PlayerProfile>.Update.Set("Skills.topic.Experience", 7d));
@@ -90,13 +105,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(post.Result.Viral).IsTrue();
+        await Assert.That(post.Result.Virality is PostViralityStatus.None or PostViralityStatus.Viral).IsTrue();
         await Assert.That(after.Skills[SkillId.Topic].Level).IsEqualTo(2);
-        await Assert.That(after.EnergyWallet?.Crystals).IsEqualTo(13);
+        await Assert.That(after.EnergyWallet?.Crystals).IsEqualTo(12);
     }
 
     [Test]
-    public async Task CreatePost_FlopGuard_ReversesSubscriberLossAsync()
+    public async Task CreatePost_FlopGuard_GivesGrowthWithoutDramaMultiplierAsync()
     {
         // Arrange
         using var api = Factory.CreateApiClient(8303);
@@ -114,9 +129,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(ordinary.Result.Delta).IsLessThan(0);
-        await Assert.That(post.Result.Viral).IsFalse();
-        await Assert.That(post.Result.Flop).IsFalse();
-        await Assert.That(post.Result.Delta).IsEqualTo(-ordinary.Result.Delta);
+        await Assert.That(post.Result.Virality).IsEqualTo(PostViralityStatus.FlopGuard);
+        await Assert.That(post.Result.Delta).IsGreaterThan(0);
+        await Assert.That(post.Result.Delta).IsLessThan(-ordinary.Result.Delta);
         await Assert.That(post.Result.Views).IsGreaterThanOrEqualTo(10L);
     }
 
@@ -146,8 +161,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             0,
             0,
             1,
-            false,
-            false)).ToArray();
+            PostViralityStatus.None)).ToArray();
         await Database.GetCollection<GamePost>("posts").InsertManyAsync(posts);
 
         // Act
@@ -236,8 +250,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             firstPost.SubscriberDelta,
             firstPost.Quality,
             firstPost.ReachRatio,
-            firstPost.Viral,
-            firstPost.Flop,
+            firstPost.Virality,
             firstPost.Version,
             firstPost.PredictedAuthorId,
             firstPost.FlopReason,
@@ -377,7 +390,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(detail.AuthorId).IsEqualTo(PlayerId.From((await GetStoredPlayerAsync(telegramUserId))["_id"].AsBsonBinaryData.ToGuid()).ToAuthorId());
         await Assert.That(detail.Views).IsEqualTo(post["Views"].ToInt64());
         await Assert.That(detail.Views).IsGreaterThanOrEqualTo(0);
-        await Assert.That(detail.Views).IsLessThanOrEqualTo(subscribersBeforePost * (post["Viral"].AsBoolean ? 2 : 1));
+        var virality = (PostViralityStatus)post["Virality"].AsInt32;
+        await Assert.That(detail.Views).IsLessThanOrEqualTo(subscribersBeforePost * (virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard ? 2 : 1));
         await Assert.That(detail.Likes).IsEqualTo(post["Likes"].ToInt64());
         await Assert.That(detail.LikedBy).IsEmpty();
         await Assert.That(detail.Comments.Count).IsEqualTo(3);
@@ -1018,8 +1032,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             original.SubscriberDelta,
             original.Quality,
             original.ReachRatio,
-            original.Viral,
-            original.Flop,
+            original.Virality,
             0,
             original.PredictedAuthorId,
             original.FlopReason,
@@ -1106,8 +1119,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var result = await api.Posts.CreatePostAsync(worldId, new CreatePostRequest { Text = text, RepostId = source.Id }, CancellationToken.None);
         var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(result.Result.Delta).IsEqualTo(1);
-        await Assert.That(result.Result.Viral).IsFalse();
-        await Assert.That(result.Result.Flop).IsFalse();
+        await Assert.That(result.Result.Virality).IsEqualTo(PostViralityStatus.None);
         await Assert.That(result.Post.RepostId).IsEqualTo(source.Id);
         await Assert.That(result.Post.Text).IsEqualTo(text);
         await Assert.That(after.Energy).IsEqualTo(before.Energy - 1);
@@ -1305,7 +1317,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var id = WorldId.From(worldId);
         var world = await Database.GetCollection<World>("worlds").Find(item => item.Id == id).SingleAsync();
         var now = Factory.Session.Clock.GetUtcNow();
-        var post = new GamePost(PostId.New(now), world.Stars[0].Id.ToAuthorId(), world.Id, world.Player.PlayerId, "Сегодня обсуждаем новую идею для нашего мира.", 50, 0, [], [], now, 0, 0.5, 1, false, false);
+        var post = new GamePost(PostId.New(now), world.Stars[0].Id.ToAuthorId(), world.Id, world.Player.PlayerId, "Сегодня обсуждаем новую идею для нашего мира.", 50, 0, [], [], now, 0, 0.5, 1, PostViralityStatus.None);
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(post);
         return post;
     }

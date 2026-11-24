@@ -1,7 +1,7 @@
 import { error, warn } from '../app/log'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { getAccessToken, refreshAccess } from './auth'
-import { InvitationClient, PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
+import { BonusClient, PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
 import type { GenerateReplyRequest, SwaggerResponse } from './generated/reki-api'
 import { assertSession, sessionGeneration } from './session'
 
@@ -17,7 +17,7 @@ export function transport(telemetry = false) {
     const headers = new Headers(init.headers)
     const path = new URL(String(url), baseUrl).pathname.slice(new URL(baseUrl).pathname.replace(/\/$/, '').length)
     const anonymous = path === '/sessions'
-    const onboardingClaim = init.method === 'GET' && /^\/posts\/onboarding-bonus\/[^/]+$/.test(path)
+    const onboardingClaim = init.method === 'GET' && /^\/bonus\/onboarding\/[^/]+$/.test(path)
     const firstToken = getAccessToken()
     if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
     let response = await fetch(url, { ...init, headers, ...(onboardingClaim ? { cache: 'no-store' as const } : {}), ...(telemetry ? { keepalive: true } : {}) })
@@ -41,7 +41,7 @@ export function transport(telemetry = false) {
 }
 const http = transport()
 export const sdk = {
-  player: new PlayerClient(baseUrl, http), invitation: new InvitationClient(baseUrl, http), posts: new PostsClient(baseUrl, http),
+  player: new PlayerClient(baseUrl, http), bonus: new BonusClient(baseUrl, http), posts: new PostsClient(baseUrl, http),
   social: new SocialClient(baseUrl, http), telemetry: new TelemetryClient(baseUrl, http), worlds: new WorldsClient(baseUrl, http),
 }
 export async function data<T>(request: Promise<SwaggerResponse<T>>, authenticated = true): Promise<T> {

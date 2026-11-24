@@ -29,7 +29,7 @@ function Limit() {
         <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Мира ответит, когда появится энергия</div>
         <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Энергия восстанавливается по одной каждые 10 минут.</div>
         <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>читать треды · комментировать друзей · листать ленту</Card>
-        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: тебе 3 кристалла за его первый пост<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост</div></Gift>
+        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга и получи 3 кристалла после его регистрации по ссылке</Gift>
         <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 энергии и все миры ›</button>
       </div>
       <BottomCTA main="Позвать друга" onMain={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }} />
@@ -109,7 +109,7 @@ function Invite() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Позвать друзей" />
       <div className="pad">
-        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Отправь ссылку другу. Когда он опубликует первый пост, создание мира откроется, а вы оба получите кристаллы.</p></Card>
+        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Когда друг зарегистрируется по твоей ссылке, создание мира откроется, а вы оба получите кристаллы.</p></Card>
         <div className="label">Друг увидит твою карточку</div>
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
           <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>

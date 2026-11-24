@@ -247,19 +247,19 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         foreach (var (author, text) in authoredPosts)
         {
             await postRepository.InsertPostAsync(
-                new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow()), author, worldId, playerId, text, 0, 0, [], [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
+                new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow()), author, worldId, playerId, text, 0, 0, [], [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, PostViralityStatus.None),
                 CancellationToken.None);
         }
 
         for (var index = 0; index < 25; index++)
         {
             await postRepository.InsertPostAsync(
-                new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow().AddMinutes(index + 1)), otherStar.Id.ToAuthorId(), worldId, playerId, $"Другая запись {index}", 0, 0, [], [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
+                new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow().AddMinutes(index + 1)), otherStar.Id.ToAuthorId(), worldId, playerId, $"Другая запись {index}", 0, 0, [], [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, PostViralityStatus.None),
                 CancellationToken.None);
         }
 
         await postRepository.InsertPostAsync(
-            new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow().AddMinutes(26)), StarId.From("removed").ToAuthorId(), worldId, playerId, "История удалённой звезды.", 0, 0, [], [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
+            new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow().AddMinutes(26)), StarId.From("removed").ToAuthorId(), worldId, playerId, "История удалённой звезды.", 0, 0, [], [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, PostViralityStatus.None),
             CancellationToken.None);
 
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Новая самостоятельная история.")));
@@ -313,7 +313,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var comment = new GameComment(CommentId.New(), parent.Id, "source-reply", player.Id.ToAuthorId(), "На карте нет моста.", false, [], null);
         var answer = new GameComment(CommentId.New(), comment.Id, null, world.Stars[0].Id.ToAuthorId(), "Я проверю мост по старому плану.", false, [], null);
         var unrelated = new GameComment(CommentId.New(), null, null, world.Stars[1].Id.ToAuthorId(), "Другая ветка", false, [], null);
-        var source = new GamePost(PostId.New(now), sourceEvent == StarFeedEventType.CommentPublished ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, player.Id, "Я нашёл старую карту.", 0, 0, [], [parent, comment, answer, unrelated], now, 0, 0, 1, false, false);
+        var source = new GamePost(PostId.New(now), sourceEvent == StarFeedEventType.CommentPublished ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, player.Id, "Я нашёл старую карту.", 0, 0, [], [parent, comment, answer, unrelated], now, 0, 0, 1, PostViralityStatus.None);
         var repository = Factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertPostAsync(source, CancellationToken.None);
         var postId = PostId.New(now);
@@ -407,7 +407,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             scenario == "hidden-comment",
             [],
             null);
-        var post = new GamePost(PostId.New(now), scenario == "foreign-author" ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, player.Id, "Исходный пост", 0, 0, [], [comment], now, 0, 0, 1, false, false);
+        var post = new GamePost(PostId.New(now), scenario == "foreign-author" ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, player.Id, "Исходный пост", 0, 0, [], [comment], now, 0, 0, 1, PostViralityStatus.None);
         var repository = Factory.Services.GetRequiredService<IPostRepository>();
         if (scenario != "missing-post")
         {

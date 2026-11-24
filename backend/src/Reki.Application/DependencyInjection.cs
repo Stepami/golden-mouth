@@ -54,6 +54,7 @@ public static class DependencyInjection
         services.AddSingleton<IFlopTest, NearCopyFlopTest>();
         services.AddSingleton<IFlopTest, SadToneFlopTest>();
         services.AddSingleton<IFlopTest, AnxiousToneFlopTest>();
+        services.AddSingleton<PostCrystalsCalculator>();
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<IStarAgentInstructions, StarAgentInstructions>();
         services.AddSingleton<IStarTurnGenerator, StarTurnGenerator>();

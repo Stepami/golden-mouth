@@ -18,7 +18,6 @@ using Reki.Application.Player.Responses;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Domain.Bonuses;
-using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Streaks;
@@ -315,185 +314,64 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
-    public async Task Referral_NewPlayerFromCode_AppliesInviteAsync()
+    public async Task Referral_NewPlayerFromCode_AwardsOnRegistrationOnceAsync()
     {
-        // Arrange
         using var inviterApi = Factory.CreateApiClient(8001);
         using var otherApi = Factory.CreateApiClient(8002);
         using var friendApi = Factory.CreateApiClient(8003);
-        await CreatePlayerWithWorldAsync(inviterApi);
+        var inviter = await CreatePlayerWithWorldAsync(inviterApi);
         await CreatePlayerWithWorldAsync(otherApi);
-        var first = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
-        var other = await otherApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
+        var code = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var other = await otherApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        await CreatePlayerWithWorldAsync(friendApi, referralCode: code.Code);
 
-        // Act
-        await CreatePlayerWithWorldAsync(friendApi, referralCode: first.Code);
-        var repeated = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
-        var friend = await GetStoredPlayerAsync(8003);
-        var inviter = await GetStoredPlayerAsync(8001);
-
-        // Assert
-        await Assert.That(first.Code).IsEqualTo(repeated.Code);
-        await Assert.That(first.Code == other.Code).IsFalse();
-        var invite = await GetStoredInviteAsync(friend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
-        await Assert.That(invite["InviterId"]).IsEqualTo(inviter["_id"]);
-        await Assert.That(friend.Contains("InvitedBy")).IsFalse();
-        await Assert.That(friend["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
-        await Assert.That(friend.Contains("FirstPostInviteBonus")).IsFalse();
-        await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsFalse();
-        await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsFalse();
-        await Assert.That(invite["InviteeBonusUsedAtUtc"].IsBsonNull).IsTrue();
-        await Assert.That(invite["InviterBonusUsedAtUtc"].IsBsonNull).IsTrue();
-        await Assert.That(inviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
+        var inviterAfterRegistration = await GetStoredPlayerAsync(8001);
+        var friendAfterRegistration = await GetStoredPlayerAsync(8003);
+        var cards = await Database.GetCollection<Bonus>("bonuses").Find(bonus => bonus.PlayerId == inviter.Id).ToListAsync();
+        await Assert.That(code.Code).IsEqualTo((await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None)).Code);
+        await Assert.That(code.Code == other.Code).IsFalse();
+        await Assert.That(inviterAfterRegistration["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
+        await Assert.That(friendAfterRegistration["Wallet"]["Crystals"].AsInt32).IsEqualTo(11);
+        await Assert.That(cards.OfType<FlopGuardBonus>().Count(card => !card.IsClaimed && card.Adder == 10)).IsEqualTo(3);
+        await Assert.That(cards.OfType<ViralCardBonus>().Count(card => !card.IsClaimed && card.Multiplier == 5)).IsEqualTo(3);
+        await PublishAsync(8003, "первый пост друга");
+        await Assert.That((await GetStoredPlayerAsync(8001))["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
+        cards = await Database.GetCollection<Bonus>("bonuses").Find(bonus => bonus.PlayerId == inviter.Id).ToListAsync();
+        await Assert.That(cards.OfType<FlopGuardBonus>().Count()).IsEqualTo(3);
+        await Assert.That(cards.OfType<ViralCardBonus>().Count()).IsEqualTo(3);
     }
 
     [Test]
-    public async Task Referral_InvalidSource_DoesNotCreateAttributionAsync()
+    public async Task Referral_InvalidSource_DoesNotAwardBonusAsync()
     {
-        // Arrange
         using var unknownApi = Factory.CreateApiClient(8004);
         using var malformedApi = Factory.CreateApiClient(8005);
-
-        // Act
         await CreatePlayerWithWorldAsync(unknownApi, referralCode: $"ref_{Guid.NewGuid():N}");
         await CreatePlayerWithWorldAsync(malformedApi, referralCode: "invalid-code");
-        await PublishAsync(8004, "первый пост без пригласителя");
-
-        // Assert
         foreach (var userId in new long[] { 8004, 8005 })
         {
             var player = await GetStoredPlayerAsync(userId);
-            await Assert.That(player.Contains("InvitedBy")).IsFalse();
-            await Assert.That(await Database.GetCollection<BsonDocument>("invites").CountDocumentsAsync(
-                new BsonDocument("InviteeId", player["_id"]))).IsEqualTo(0L);
-            await Assert.That(player["Wallet"]["Energy"].AsInt32).IsEqualTo(userId == 8004 ? 9 : 10);
-            await Assert.That(player.Contains("FirstPostInviteBonus")).IsFalse();
+            await Assert.That(player["Wallet"]["Crystals"].AsInt32).IsEqualTo(10);
         }
-
-        var noInviter = await unknownApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(noInviter.Energy).IsEqualTo(9);
-        await Assert.That((await unknownApi.Invitation.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
     }
 
     [Test]
-    public async Task Referral_InvitedPlayerPublishesFirstPost_AppliesStoredBonusOnceAsync()
+    public async Task Referral_FourFriendsRegister_GrantsEveryInviterBonusAsync()
     {
-        // Arrange
-        const long inviterUserId = 8010;
-        const long friendUserId = 8011;
-        using var inviterApi = Factory.CreateApiClient(inviterUserId);
-        using var friendApi = Factory.CreateApiClient(friendUserId);
-        var inviterProfile = await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
-        var onboarded = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        var pendingInvite = await friendApi.Invitation.GetInvitationAsync(CancellationToken.None);
-        var inviterAfterOnboarding = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-
-        // Act
-        var firstPost = await PublishAsync(friendUserId, "первый пост друга");
-        var inviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        var friend = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        var secondPost = await PublishAsync(friendUserId, "второй пост друга");
-        var storedInviter = await GetStoredPlayerAsync(inviterUserId);
-        var storedFriend = await GetStoredPlayerAsync(friendUserId);
-
-        // Assert
-        await Assert.That(onboarded.Energy).IsEqualTo(10);
-        await Assert.That(pendingInvite.Bonus).IsEqualTo(1);
-        await Assert.That(inviterAfterOnboarding.Energy).IsEqualTo(10);
-        await Assert.That(inviterAfterOnboarding.HitOwnWorldMilestone).IsFalse();
-        await Assert.That(inviter.HitOwnWorldMilestone).IsTrue();
-        await Assert.That(inviter.Energy).IsEqualTo(10);
-        await Assert.That(friend.Energy).IsEqualTo(9);
-        await Assert.That((await friendApi.Invitation.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
-        await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
-        await Assert.That(storedFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(8);
-        await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
-        var friendViralPosts = (firstPost.Result.Viral ? 1 : 0) + (secondPost.Result.Viral ? 1 : 0);
-        await Assert.That(storedFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(11 + friendViralPosts);
-        var invite = await GetStoredInviteAsync(storedFriend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
-        await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
-        await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
-        await Assert.That(invite["InviterBonusUsedAtUtc"]).IsEqualTo(invite["InviteeBonusUsedAtUtc"]);
-        var cards = await Database.GetCollection<Bonus>("bonuses").Find(bonus => bonus.PlayerId == inviterProfile.Id).ToListAsync();
-        await Assert.That(cards.OfType<FlopGuardBonus>().Count(card => !card.IsClaimed && card.Adder == 10)).IsEqualTo(4);
-        await Assert.That(cards.OfType<ViralCardBonus>().Count(card => !card.IsClaimed && card.Multiplier == 5)).IsEqualTo(4);
-    }
-
-    [Test]
-    public async Task Referral_FourFriendsPublish_GrantsEveryInviterBonusAsync()
-    {
-        // Arrange
-        const long inviterUserId = 8012;
-        using var inviterApi = Factory.CreateApiClient(inviterUserId);
-        var inviterProfile = await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
-
-        // Act
-        var lastPostWentViral = false;
-        for (long friendUserId = 8013; friendUserId <= 8016; friendUserId++)
-        {
-            using var friendApi = Factory.CreateApiClient(friendUserId);
-            await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-            lastPostWentViral = (await PublishAsync(friendUserId, "первый пост друга")).Result.Viral;
-        }
-
-        var inviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        var fourthFriend = await GetStoredPlayerAsync(8016);
-        var storedInviter = await GetStoredPlayerAsync(inviterUserId);
-
-        // Assert
-        await Assert.That(inviter.Energy).IsEqualTo(10);
-        await Assert.That(storedInviter.Contains("InviteBonusesEarnedInPeriod")).IsFalse();
-        await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
-        await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(22);
-        await Assert.That(fourthFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(9);
-        using var fourthApi = Factory.CreateApiClient(8016);
-        var fourthProfile = await fourthApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(fourthFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(lastPostWentViral ? 12 : 11);
-        await Assert.That(fourthProfile.Energy).IsEqualTo(9);
-        var cards = await Database.GetCollection<Bonus>("bonuses").Find(bonus => bonus.PlayerId == inviterProfile.Id).ToListAsync();
-        await Assert.That(cards.OfType<FlopGuardBonus>().Count(card => !card.IsClaimed && card.Adder == 10)).IsEqualTo(13);
-        await Assert.That(cards.OfType<ViralCardBonus>().Count(card => !card.IsClaimed && card.Multiplier == 5)).IsEqualTo(13);
-    }
-
-    [Test]
-    [Arguments(false)]
-    [Arguments(true)]
-    public async Task Referral_ExistingEnergy_AddsOnlyForUnusedInviteAsync(bool alreadyUsed)
-    {
-        using var inviterApi = Factory.CreateApiClient(8560);
-        using var friendApi = Factory.CreateApiClient(8561);
+        using var inviterApi = Factory.CreateApiClient(8012);
         var inviter = await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
-        var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        var players = Database.GetCollection<BsonDocument>("players");
-        await players.UpdateManyAsync(
-            Builders<BsonDocument>.Filter.In("_id", new[] { inviter.Id, friend.Id }.Select(id => new BsonBinaryData(id.Value, GuidRepresentation.Standard))),
-            Builders<BsonDocument>.Update.Set("Wallet.Energy", 4));
-        if (alreadyUsed)
+        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        for (long userId = 8013; userId <= 8016; userId++)
         {
-            var now = Factory.Session.Clock.GetUtcNow();
-            await Database.GetCollection<Invitation>("invites").UpdateOneAsync(
-                item => item.InviteeId == friend.Id,
-                Builders<Invitation>.Update
-                    .Set(item => item.InviteeBonusUsed, true)
-                    .Set(item => item.InviterBonusUsed, true)
-                    .Set(item => item.InviteeBonusUsedAtUtc, now)
-                    .Set(item => item.InviterBonusUsedAtUtc, now));
+            using var friendApi = Factory.CreateApiClient(userId);
+            await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         }
 
-        var published = await PublishAsync(8561, "пост с существующим бонусом");
-
-        var expectedCrystals = (alreadyUsed ? 10 : 11) + (published.Result.Viral ? 1 : 0);
-        await Assert.That((await GetStoredPlayerAsync(8560))["Wallet"]["Energy"].AsInt32).IsEqualTo(4);
-        await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Energy"].AsInt32).IsEqualTo(3);
-        await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Crystals"].AsInt32)
-            .IsEqualTo(expectedCrystals);
-        await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(4);
-        await Assert.That((await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(3);
+        await Assert.That((await GetStoredPlayerAsync(8012))["Wallet"]["Crystals"].AsInt32).IsEqualTo(22);
+        await Assert.That((await GetStoredPlayerAsync(8016))["Wallet"]["Crystals"].AsInt32).IsEqualTo(11);
+        var cards = await Database.GetCollection<Bonus>("bonuses").Find(bonus => bonus.PlayerId == inviter.Id).ToListAsync();
+        await Assert.That(cards.OfType<FlopGuardBonus>().Count()).IsEqualTo(9);
+        await Assert.That(cards.OfType<ViralCardBonus>().Count()).IsEqualTo(9);
     }
 
     [Test]
@@ -543,8 +421,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 ],
             },
             CancellationToken.None);
-        var invitations = Database.GetCollection<Invitation>("invites");
-        var deletedPlayerId = PlayerId.From(Guid.Parse(playerId));
         var otherPlayerId = PlayerId.New();
         var authOptions = Factory.Services.GetRequiredService<IOptions<OpenIddictMongoDbOptions>>().Value;
         var tokens = Database.GetCollection<OpenIddictMongoDbToken>(authOptions.TokensCollectionName);
@@ -565,14 +441,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         });
         var applicationCount = await applications.CountDocumentsAsync(item => item.ClientId == "reki-test-client");
         await Assert.That(applicationCount).IsEqualTo(1L);
-        var unrelatedInvitation = Invitation.Create(otherPlayerId, PlayerId.New(), Factory.Session.Clock.GetUtcNow(), 5);
-        await invitations.InsertManyAsync(new[]
-        {
-            Invitation.Create(deletedPlayerId, otherPlayerId, Factory.Session.Clock.GetUtcNow(), 5),
-            Invitation.Create(PlayerId.New(), deletedPlayerId, Factory.Session.Clock.GetUtcNow(), 5),
-            unrelatedInvitation,
-        });
-
         var before = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
 
         // Act
@@ -584,8 +452,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(await tokens.CountDocumentsAsync(item => item.Subject == otherSubject)).IsEqualTo(1L);
         await Assert.That(await authorizations.CountDocumentsAsync(item => item.Subject == otherSubject)).IsEqualTo(1L);
         await Assert.That(await applications.CountDocumentsAsync(item => item.ClientId == "reki-test-client")).IsEqualTo(applicationCount);
-        var savedInvitations = await invitations.Find(FilterDefinition<Invitation>.Empty).ToListAsync();
-        await Assert.That(savedInvitations).IsEquivalentTo(new[] { unrelatedInvitation });
         await Assert.That(await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None)).IsEqualTo(before - 1);
         var deletion = Factory.Services.GetFakeLogCollector().GetSnapshot()
             .Where(record => record.Category == typeof(ProductTelemetry).FullName)
@@ -654,7 +520,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
         foreach (var interest in new[] { false, true, true })
         {
-            var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = interest }, CancellationToken.None);
+            var response = await api.Bonus.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = interest }, CancellationToken.None);
             await Assert.That(response.Bonus).IsEqualTo(interest ? 0 : 5);
             var saved = await playerRepository.GetPlayerAsync(ExternalUserId.From($"telegram:{8402}"), CancellationToken.None)
                         ?? throw new InvalidOperationException("Missing player.");
@@ -666,7 +532,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         using var legacyApi = Factory.CreateApiClient(8403);
         await CreatePlayerWithWorldAsync(legacyApi);
-        await legacyApi.Player.ClaimPlusInterestAsync(null, CancellationToken.None);
+        await legacyApi.Bonus.ClaimPlusInterestAsync(null, CancellationToken.None);
         var legacyPlayer = await playerRepository.GetPlayerAsync(ExternalUserId.From($"telegram:{8403}"), CancellationToken.None)
                            ?? throw new InvalidOperationException("Missing player.");
         await Assert.That(legacyPlayer.PlusNotifyRequested).IsTrue();
@@ -761,7 +627,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             cancellationToken: CancellationToken.None);
 
         // Act
-        var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
+        var response = await api.Bonus.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
 
         // Assert
         await Assert.That(response.Bonus).IsEqualTo(alreadyClaimed ? 0 : 5);
@@ -775,64 +641,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id);
         var savedWorld = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
-    }
-
-    [Test]
-    [Arguments(-1)]
-    [Arguments(0)]
-    public async Task Referral_DayBoundary_UsesSixUtcResetAsync(int secondsAfterReset)
-    {
-        // Arrange
-        var reset = new DateTimeOffset(2026, 10, 6, 6, 0, 0, TimeSpan.Zero);
-        Factory.Session.Clock.SetUtcNow(reset.AddSeconds(-2));
-        using var inviterApi = Factory.CreateApiClient(8520);
-        using var friendApi = Factory.CreateApiClient(8521);
-        await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
-        var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        await PublishAsync(8521, "пост перед сбросом");
-        await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(10);
-
-        // Act
-        Factory.Session.Clock.SetUtcNow(reset.AddSeconds(secondsAfterReset));
-        var currentInviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        var currentFriend = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-
-        // Assert
-        await Assert.That(currentInviter.Energy).IsEqualTo(10);
-        await Assert.That(currentFriend.Energy).IsEqualTo(9);
-        await Assert.That((await friendApi.Invitation.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
-        var invite = await Database.GetCollection<Invitation>("invites")
-            .Find(item => item.InviteeId == friend.Id).SingleAsync();
-        await Assert.That(invite.InviterBonusUsed).IsTrue();
-        await Assert.That(invite.InviteeBonusUsed).IsTrue();
-        await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(reset.AddSeconds(-2));
-        await Assert.That(invite.InviteeBonusUsedAtUtc).IsEqualTo(reset.AddSeconds(-2));
-    }
-
-    [Test]
-    public async Task Referral_FirstPostAtDayReset_GrantsBothBonusesInNewPeriodAsync()
-    {
-        // Arrange
-        using var inviterApi = Factory.CreateApiClient(8550);
-        using var friendApi = Factory.CreateApiClient(8551);
-        await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
-        var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        var reset = new DateTimeOffset(2026, 10, 6, 6, 0, 0, TimeSpan.Zero);
-        Factory.Session.Clock.SetUtcNow(reset);
-
-        // Act
-        await PublishAsync(8551, "первый пост на границе дня");
-
-        // Assert
-        await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(10);
-        var current = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(current.Energy).IsEqualTo(9);
-        var invitation = await Database.GetCollection<Invitation>("invites")
-            .Find(item => item.InviteeId == friend.Id).SingleAsync();
-        await Assert.That(invitation.InviterBonusUsedAtUtc).IsEqualTo(reset);
-        await Assert.That(invitation.InviteeBonusUsedAtUtc).IsEqualTo(reset);
     }
 
     [Test]
@@ -887,24 +695,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
-    public async Task Invitation_WithoutAuthentication_ReturnsUnauthorizedAsync()
-    {
-        using var api = Factory.CreateApiClient();
-        var response = await Assert.ThrowsAsync<InvitationApiException>(() => api.Invitation.GetInvitationAsync(CancellationToken.None));
-        await Assert.That(response).IsNotNull();
-        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
-    }
-
-    [Test]
-    public async Task Invitation_BeforeOnboarding_ReturnsEmptyAsync()
-    {
-        using var api = Factory.CreateApiClient(8583);
-        await api.RegisterAsync(new OnboardingRequest { BirthYear = 1990, Address = Address.Nick }, CancellationToken.None);
-        var response = await api.Invitation.GetInvitationAsync(CancellationToken.None);
-        await Assert.That(response.Bonus).IsEqualTo(0);
-    }
-
-    [Test]
     public async Task Onboarding_NewWorlds_KeepAccountWalletAsync()
     {
         // Arrange
@@ -943,7 +733,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var before = await GetStoredPlayerAsync(28405);
 
         // Act
-        var result = await api.Player.ExchangeEnergyAsync(CancellationToken.None);
+        var result = await api.Bonus.ExchangeEnergyAsync(CancellationToken.None);
         var after = await GetStoredPlayerAsync(28405);
 
         // Assert
@@ -969,7 +759,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var before = await GetStoredPlayerAsync(28406);
 
         // Act
-        var result = await api.Player.ExchangeEnergyAsync(CancellationToken.None);
+        var result = await api.Bonus.ExchangeEnergyAsync(CancellationToken.None);
         var wallet = await ReadWalletAsync(api);
         var after = await GetStoredPlayerAsync(28406);
 
@@ -990,9 +780,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await SetWalletAsync(28407, 1, 10);
 
         // Act
-        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => api.Player.ExchangeEnergyAsync(CancellationToken.None)));
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => api.Bonus.ExchangeEnergyAsync(CancellationToken.None)));
         var stored = await GetStoredPlayerAsync(28407);
-        var next = await api.Player.ExchangeEnergyAsync(CancellationToken.None);
+        var next = await api.Bonus.ExchangeEnergyAsync(CancellationToken.None);
 
         // Assert
         await Assert.That(results.Count(result => result.Exchanged)).IsEqualTo(1);
@@ -1001,13 +791,32 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(stored["Wallet"]["Crystals"].AsInt32).IsEqualTo(7);
     }
 
+    [Test]
+    public async Task Booster_WithSixCrystals_BuysBothCardTypesAsync()
+    {
+        // Arrange
+        const long userId = 28408;
+        using var api = Factory.CreateApiClient(userId);
+        var player = await CreatePlayerWithWorldAsync(api);
+        await SetWalletAsync(userId, 10, 6);
+
+        // Act
+        var purchased = await api.Bonus.ClaimBoosterAsync(CancellationToken.None);
+        var wallet = await ReadWalletAsync(api);
+        var bonuses = await Database.GetCollection<Bonus>("bonuses")
+            .Find(bonus => bonus.PlayerId == player.Id && !bonus.IsClaimed)
+            .ToListAsync();
+
+        // Assert
+        await Assert.That(purchased).IsTrue();
+        await Assert.That(wallet.Crystals).IsEqualTo(0);
+        await Assert.That(bonuses.OfType<ViralCardBonus>().Select(card => card.Multiplier)).IsEquivalentTo([5, 3, 3, 3]);
+        await Assert.That(bonuses.OfType<FlopGuardBonus>().Select(card => card.Adder)).IsEquivalentTo([10, 5, 5, 5]);
+    }
+
     private static async Task<EnergyWalletResponse> ReadWalletAsync(TestApiClient api) =>
         (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet
         ?? throw new InvalidOperationException("The player response has no wallet.");
-
-    private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>
-        Database.GetCollection<BsonDocument>("invites").Find(new BsonDocument("InviteeId", new BsonBinaryData(Guid.Parse(inviteeId), GuidRepresentation.Standard)))
-            .SingleAsync(CancellationToken.None);
 
     private Task SetWalletAsync(long userId, int energy, int crystals) =>
         Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(

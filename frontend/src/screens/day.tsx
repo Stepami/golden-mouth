@@ -235,7 +235,7 @@ function Stage() {
   useEffect(() => { if (hasRegularPost) nextStoryPostSaved(p.worldInstanceId ?? p.world) }, [hasRegularPost, p.worldInstanceId, p.world])
   const gestures = usePostListGestures(cacheKey, list, () => Promise.all([list.refresh(), refresh()]))
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
-  if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home channelEmpty firstPostConfirmed={nav.params.firstPostConfirmed === true || list.pending === null && !list.hasNext} /></div>
+  if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home firstPostConfirmed={nav.params.firstPostConfirmed === true || list.pending === null && !list.hasNext} /></div>
   return (
     <div className="screen channel-screen post-list-screen" ref={gestures.screenRef}>
       {pullIndicator}
@@ -314,7 +314,7 @@ function Me() {
         </> : <>
           <div className="own-unlock-goal"><b>Пригласи 1 друга</b><span>0/1</span></div>
           <progress aria-label="Друзья с первым постом до открытия своего мира" value={0} max={1} />
-          <p className="small muted">Мир откроется, когда друг опубликует первый пост.</p>
+          <p className="small muted">Мир откроется, когда друг зарегистрируется по твоей ссылке.</p>
           <Button onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Пригласить друга</Button>
           <p className="small muted own-unlock-alternative">Или набери 500 подписчиков в одном мире.</p>
         </>}</div>

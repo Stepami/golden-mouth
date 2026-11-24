@@ -12,8 +12,7 @@ internal sealed class SubscriberDeltaCalculator(IOptionsMonitor<GameBalance> bal
         GamePost post,
         PostScore turn,
         bool ownWords,
-        bool viral,
-        bool flop)
+        ViralityCalculator.Result virality)
     {
         if (post.RepostId is not null)
         {
@@ -29,14 +28,16 @@ internal sealed class SubscriberDeltaCalculator(IOptionsMonitor<GameBalance> bal
             (0.5 + turn.Quality) *
             Math.Pow(Math.Max(1, world.Player.Subscribers), currentBalance.Growth.Power) *
             multiplier *
-            (flop ? worldDifficulty.Drama[world.Player.Drama].LossMultiplier : 1);
+            (virality.Virality is PostViralityStatus.Flop
+                ? worldDifficulty.Drama[world.Player.Drama].LossMultiplier
+                : 1);
 
-        var viralMultiplier = viral
-            ? currentBalance.Viral.Multiplier * worldDifficulty.ViralMultiplier
-            : 1;
-
-        var delta = Math.Max(1L, (long)Math.Round(growth * viralMultiplier));
-        return flop ? -Math.Min(world.Player.Subscribers, delta) : delta;
+        var delta = Math.Max(1L, (long)Math.Round(growth * virality.Multiplier));
+        return virality.Virality switch
+        {
+            PostViralityStatus.Flop => -Math.Min(world.Player.Subscribers, delta),
+            _ => delta,
+        };
     }
 
     private double GetGrowthMultiplier(World gameWorld, bool ownWords)

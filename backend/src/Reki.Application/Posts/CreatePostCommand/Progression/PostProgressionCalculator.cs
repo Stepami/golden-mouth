@@ -30,21 +30,21 @@ internal sealed class PostProgressionCalculator(
 
         var starId = await stars.GetRelevantCommenterAsync(gameWorld, post);
         var result = await viralityCalculator.CalculateAsync(post, turn, gameWorld, cancellationToken);
-        var viral = result.Kind == ViralityCalculator.Outcome.Viral;
-        var flop = result.Kind == ViralityCalculator.Outcome.Flop;
-        var guarded = result.Kind == ViralityCalculator.Outcome.GuardedFlop;
-        var (views, likes) = postNumbersCalculator.Calculate(gameWorld, viral);
-        var subscriberDelta = subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, viral, flop || guarded);
+        var (views, likes) = postNumbersCalculator.Calculate(gameWorld, result);
+        var subscriberDelta = subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, result);
         var skills = AddSkillExperience(player, post, turn, ownWords);
+        var levelChange = skills.ToDictionary(
+            item => item.Key,
+            item => item.Value.Level > player.Skills[item.Key].Level);
 
         return new PostProgression(
-            (guarded ? -subscriberDelta : subscriberDelta) * result.Multiplier,
+            subscriberDelta,
             turn.Quality,
-            viral,
-            flop,
+            result.Virality,
             skills,
-            (views * result.Multiplier) + result.ViewsAdder,
-            likes * result.Multiplier,
+            levelChange,
+            views,
+            likes,
             starId,
             turn);
     }

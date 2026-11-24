@@ -45,6 +45,18 @@ public sealed class PlayerWallet(int energy, int crystals, DateTimeOffset energy
         Crystals += amount;
     }
 
+    internal bool TrySpendCrystals(int cost)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cost);
+        if (Crystals < cost)
+        {
+            return false;
+        }
+
+        Crystals -= cost;
+        return true;
+    }
+
     internal bool Restore(DateTimeOffset now)
     {
         var ticks = (long)((now - EnergyUpdatedAtUtc).TotalSeconds / RegenSeconds);

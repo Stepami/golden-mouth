@@ -87,13 +87,15 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
 
         var beforeFinish = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var priorPosts = await Database.GetCollection<GamePost>("posts")
-            .CountDocumentsAsync(post => post.OwnerId == player.Id && post.AuthorId == player.Id.ToAuthorId());
+            .CountDocumentsAsync(post => post.OwnerId == player.Id && post.AuthorId == player.Id.ToAuthorId() &&
+                post.Virality == PostViralityStatus.None && post.RepostId == null);
         await PublishAsync(api, firstWorld, string.Empty, first.Post.PostId);
         var finishedCard = await ReadChallengeAsync(api);
         var finishedWallet = (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet?.Crystals;
         var nextPost = await PublishAsync(api, secondWorld, "Сегодня следующая репетиция.");
         var afterFinish = await ReadChallengeAsync(api);
-        var afterFinishWallet = (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet?.Crystals;
+        var afterFinishPlayer = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        var afterFinishWallet = afterFinishPlayer.EnergyWallet?.Crystals;
         await api.Worlds.DeleteWorldAsync(firstWorld.ToString(), CancellationToken.None);
         var afterDelete = await ReadChallengeAsync(api);
 
@@ -112,9 +114,11 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         await Assert.That(completed.Completion[DailyTaskType.Posts]).IsTrue();
         await Assert.That(finishedCard.Completion.Values.All(done => done)).IsTrue();
         await Assert.That(finishedCard.Values[firstWorld][DailyTaskType.Reposts].Progress).IsEqualTo(repostTarget);
-        var publicationReward = (priorPosts + 1) % 5 == 0 ? 1 : 0;
-        await Assert.That(finishedWallet - beforeFinish.EnergyWallet?.Crystals).IsEqualTo(publicationReward + 2);
-        await Assert.That(afterFinishWallet - finishedWallet).IsEqualTo(nextPost.Result.Viral ? 1 : 0);
+        await Assert.That(finishedWallet - beforeFinish.EnergyWallet?.Crystals).IsEqualTo(2);
+        var ordinaryMilestone = nextPost.Result.Virality == PostViralityStatus.None && (priorPosts + 1) % 5 == 0;
+        var publicationReward = nextPost.Result.Virality == PostViralityStatus.Viral || ordinaryMilestone ? 1 : 0;
+        var skillReward = afterFinishPlayer.Skills.Any(skill => skill.Value.Level > beforeFinish.Skills[skill.Key].Level) ? 1 : 0;
+        await Assert.That(afterFinishWallet - finishedWallet).IsEqualTo(publicationReward + skillReward);
         await Assert.That(afterFinish.Values[secondWorld][DailyTaskType.Posts].Progress).IsEqualTo(1L);
         await Assert.That(afterDelete.Values.ContainsKey(firstWorld)).IsFalse();
         await Assert.That(afterDelete.Completion[DailyTaskType.Posts]).IsTrue();

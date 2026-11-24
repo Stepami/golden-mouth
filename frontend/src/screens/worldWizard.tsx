@@ -58,7 +58,7 @@ export function ChooseWorld() {
       <div className="card own-world-unlock"><h2>✦ Создай свой мир</h2>{player?.hitOwnWorldMilestone ? <><p className="small muted">Придумай место, героев и начало истории.</p><Button onClick={() => startOwn()}>Создать свой мир</Button></> : <>
         <div className="own-unlock-goal"><b>Пригласи 1 друга</b><span>0/1</span></div>
         <progress aria-label="Друзья с первым постом до открытия своего мира" value={0} max={1} />
-        <p className="small muted">Мир откроется, когда друг опубликует первый пост.</p>
+        <p className="small muted">Мир откроется, когда друг зарегистрируется по твоей ссылке.</p>
         {player && <Button onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Пригласить друга</Button>}
         <p className="small muted own-unlock-alternative">Или набери 500 подписчиков в одном мире.</p>
       </>}

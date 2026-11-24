@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -12,14 +12,6 @@ namespace Reki.Application.Posts.CreatePostCommand.Progression;
 
 internal sealed class ViralityCalculator(IOptionsMonitor<GameBalance> balance, IBonusRepository bonuses)
 {
-    internal enum Outcome
-    {
-        Regular,
-        Viral,
-        Flop,
-        GuardedFlop,
-    }
-
     public async Task<Result> CalculateAsync(
         GamePost post,
         PostScore turn,
@@ -28,22 +20,30 @@ internal sealed class ViralityCalculator(IOptionsMonitor<GameBalance> balance, I
     {
         if (post.RepostId is not null)
         {
-            return new(Outcome.Regular);
+            return new(PostViralityStatus.None);
         }
 
         if (turn.IsFlop)
         {
             var guard = await bonuses.TryClaimBonus<FlopGuardBonus>(post.OwnerId, cancellationToken);
-            return guard is null ? new(Outcome.Flop) : new(Outcome.GuardedFlop, ViewsAdder: guard.Adder);
+            return guard is null
+                ? new(PostViralityStatus.Flop)
+                : new(PostViralityStatus.FlopGuard, ViewsAdder: guard.Adder);
         }
 
         if (IsNaturallyViral(post, turn, world))
         {
-            return new(Outcome.Viral);
+            return new(
+                PostViralityStatus.Viral,
+                Multiplier: balance.CurrentValue.Difficulties[world.Difficulty].ViralMultiplier);
         }
 
         var card = await bonuses.TryClaimBonus<ViralCardBonus>(post.OwnerId, cancellationToken);
-        return card is null ? new(Outcome.Regular) : new(Outcome.Viral, card.Multiplier);
+        return card is null
+            ? new(PostViralityStatus.None)
+            : new(
+                PostViralityStatus.ViralCard,
+                card.Multiplier * balance.CurrentValue.Viral.Multiplier);
     }
 
     private static double StableRoll(GamePost post)
@@ -63,5 +63,5 @@ internal sealed class ViralityCalculator(IOptionsMonitor<GameBalance> balance, I
         return StableRoll(post) < Math.Clamp(chance, 0, 1);
     }
 
-    internal sealed record Result(Outcome Kind, int Multiplier = 1, int ViewsAdder = 0);
+    internal sealed record Result(PostViralityStatus Virality, int Multiplier = 1, int ViewsAdder = 0);
 }

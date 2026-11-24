@@ -90,7 +90,7 @@ public sealed class World
     public World PublishPost(PostProgression progression)
     {
         var changed = Player.SetSubscribers(Math.Max(0, Player.Subscribers + progression.SubscriberDelta));
-        if (progression.Viral)
+        if (progression.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard)
         {
             changed |= Player.UnlockAchievement(AchievementCatalog.FirstViral);
         }

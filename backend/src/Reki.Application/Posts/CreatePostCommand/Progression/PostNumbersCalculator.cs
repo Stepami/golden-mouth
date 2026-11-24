@@ -1,22 +1,24 @@
 ﻿using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
+using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.CreatePostCommand.Progression;
 
 internal sealed class PostNumbersCalculator(IOptionsMonitor<GameBalance> balance)
 {
-    public Result Calculate(World world, bool viral)
+    public Result Calculate(World world, ViralityCalculator.Result viralityResult)
     {
         var currentBalance = balance.CurrentValue;
         var percentage = Random.Shared.Next(currentBalance.LikesMinPercent, currentBalance.LikesMaxPercent + 1);
 
         var views =
-            Random.Shared.NextInt64(world.Player.Subscribers + 1) *
-            (viral ? 2 : 1);
+            (Random.Shared.NextInt64(world.Player.Subscribers + 1) *
+            viralityResult.Multiplier) +
+            viralityResult.ViewsAdder;
         var likes =
             (long)Math.Ceiling((decimal)views * percentage / 100) *
-            (viral ? 3 : 1);
+            (viralityResult.Virality is PostViralityStatus.Viral or PostViralityStatus.ViralCard ? 3 : 1);
 
         return new Result(views, likes);
     }

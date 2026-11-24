@@ -41,7 +41,7 @@
 | `screen_view`, `screen_leave` | смена экрана | screen, prev, ms (время на экране) |
 | `tap` | вкладка, главная / вторая кнопка экрана | id (`tab`, `cta_main`, `cta_second`), to |
 | `onboarding_step` | шаги онбординга | step (age / world / channel / world_settings / done), ok, world, address, star |
-| `post_publish`, `post_result` | пост и его итог | len, own_words (происхождение черновика); delta, viral, flop |
+| `post_publish`, `post_result` | пост и его итог | len, own_words (происхождение черновика); delta, virality (`none`, `viral`, `flop`, `viralCard`, `flopGuard`) |
 | `tap` с `id=result_card_viewed` | карточка фактически показалась после подтверждённого результата; один раз на публикацию в сессии | `kind=gain\|loss\|unchanged` |
 | `tap` с `id=post_open_conversation` / `result_open_next_post` | из результата открыли разговор или редактор | `ok` у перехода к разговору показывает наличие реплики |
 | `limit_reached` | упёрся в лимит | |

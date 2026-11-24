@@ -27,7 +27,7 @@ public sealed class TestApiClient : IDisposable
 
         StoryCards = new StoryCardsClient(httpClient);
         Player = new PlayerClient(httpClient);
-        Invitation = new InvitationClient(httpClient);
+        Bonus = new BonusClient(httpClient);
         Posts = new PostsClient(httpClient);
         Social = new SocialClient(httpClient);
         Telemetry = new TelemetryClient(httpClient);
@@ -38,7 +38,7 @@ public sealed class TestApiClient : IDisposable
 
     public PlayerClient Player { get; }
 
-    public InvitationClient Invitation { get; }
+    public BonusClient Bonus { get; }
 
     public PostsClient Posts { get; }
 

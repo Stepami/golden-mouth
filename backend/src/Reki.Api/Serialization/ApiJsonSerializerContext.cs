@@ -9,7 +9,6 @@ using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Api.Requests.Worlds;
-using Reki.Application.Invites.Responses;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
@@ -24,7 +23,6 @@ using Reki.Application.Social.Responses.Challenge;
 using Reki.Application.Social.Responses.Dm;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds.Responses;
-using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
@@ -70,13 +68,11 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StreakId))]
 [JsonSerializable(typeof(PostId))]
 [JsonSerializable(typeof(CommentId))]
-[JsonSerializable(typeof(InvitationId))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(PlayerResponse))]
 [JsonSerializable(typeof(PlayerStreakResponse))]
 [JsonSerializable(typeof(ReferralResponse))]
-[JsonSerializable(typeof(InvitationResponse))]
 [JsonSerializable(typeof(OnboardingRequest))]
 [JsonSerializable(typeof(MergePlayersRequest))]
 [JsonSerializable(typeof(CreatePostRequest))]
@@ -117,6 +113,7 @@ namespace Reki.Api.Serialization;
     Converters =
     [
         typeof(JsonStringEnumConverter<AddressType>),
+        typeof(CamelCaseEnumConverter<PostViralityStatus>),
         typeof(CamelCaseEnumConverter<WorldDrama>),
         typeof(CamelCaseEnumConverter<WorldDifficulty>),
         typeof(CamelCaseEnumConverter<FeedItemKind>),

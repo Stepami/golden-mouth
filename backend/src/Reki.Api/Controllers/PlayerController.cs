@@ -2,11 +2,10 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Player;
 using Reki.Application.Player;
 using Reki.Application.Player.DeletePlayerCommand;
-using Reki.Application.Player.ExchangeEnergyCommand;
+using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.MergePlayersCommand;
 using Reki.Application.Player.RefreshDailyChallengeCommand;
 using Reki.Application.Player.RegisterWebPushCommand;
@@ -22,12 +21,12 @@ namespace Reki.Api.Controllers;
 [ApiController]
 [Authorize(Policy = AuthConstants.Policies.RekiAppJwt)]
 [Produces("application/json")]
-[Route("/")]
+[Route("me")]
 public sealed class PlayerController(
     IRekiContext rekiContext,
     ISender sender) : ControllerBase
 {
-    [HttpGet("me", Name = "GetCurrentPlayer")]
+    [HttpGet(Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
@@ -38,16 +37,9 @@ public sealed class PlayerController(
         return TypedResults.Ok(player.ToPlayerResponse());
     }
 
-    [HttpGet("me/streak", Name = "GetPlayerStreak")]
+    [HttpGet("streak", Name = "GetPlayerStreak")]
     public async Task<Ok<PlayerStreakResponse>> GetPlayerStreakAsync(CancellationToken cancellationToken) =>
         TypedResults.Ok((await sender.Send(new PlayerStreakQuery(rekiContext.PlayerId), cancellationToken)).ToPlayerStreakResponse());
-
-    [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]
-    public async Task<Ok<EnergyExchangeResponse>> ExchangeEnergyAsync(CancellationToken cancellationToken)
-    {
-        var result = await sender.Send(new ExchangeEnergy(), cancellationToken);
-        return TypedResults.Ok(result);
-    }
 
     [HttpPatch("settings", Name = "UpdateSettings")]
     [ActionName("UpdateSettings")]
@@ -61,24 +53,11 @@ public sealed class PlayerController(
         return TypedResults.Ok();
     }
 
-    [HttpPut("me/notification-channels/web-push", Name = "RegisterWebPush")]
+    [HttpPut("notification-channels/web-push", Name = "RegisterWebPush")]
     public async Task<Ok> RegisterWebPushAsync(WebPushSubscriptionRequest request, CancellationToken cancellationToken)
     {
         await sender.Send(new RegisterWebPush(request.Endpoint, request.P256dh, request.Auth), cancellationToken);
         return TypedResults.Ok();
-    }
-
-    [HttpPost("plus-interest", Name = "ClaimPlusInterest")]
-    [ActionName("ClaimPlusInterest")]
-    public async Task<Ok<PlusInterestResponse>> ClaimPlusInterestAsync(
-        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)]
-        PlusInterestRequest? request,
-        CancellationToken cancellationToken)
-    {
-        var bonus = await sender.Send(
-            request.ToClaimPlusInterest(),
-            cancellationToken);
-        return TypedResults.Ok(new PlusInterestResponse(bonus));
     }
 
     [HttpPost("merge", Name = "MergePlayers")]
@@ -91,7 +70,17 @@ public sealed class PlayerController(
         return TypedResults.Ok();
     }
 
-    [HttpDelete("me", Name = "DeleteCurrentPlayer")]
+    [HttpGet("referral", Name = "GetReferralCode")]
+    [ActionName("GetReferralCode")]
+    public async Task<Ok<ReferralResponse>> GetReferralCodeAsync(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new ReferralQuery(rekiContext.PlayerId),
+            cancellationToken);
+        return TypedResults.Ok(result);
+    }
+
+    [HttpDelete(Name = "DeleteCurrentPlayer")]
     [ActionName("DeleteCurrentPlayer")]
     public async Task<Ok> DeleteCurrentPlayerAsync(
         CancellationToken cancellationToken)

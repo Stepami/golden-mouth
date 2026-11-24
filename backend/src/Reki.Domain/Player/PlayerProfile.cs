@@ -278,6 +278,17 @@ public sealed class PlayerProfile
         }
     }
 
+    public bool TrySpendCrystals(int cost)
+    {
+        if (!Wallet.TrySpendCrystals(cost))
+        {
+            return false;
+        }
+
+        Version++;
+        return true;
+    }
+
     public PlayerProfile UpdateLastSeenAt(DateTimeOffset now)
     {
         if (LastSeenAt != now)
