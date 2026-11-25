@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { api } from '../api/client'
+import { api, ApiError } from '../api/client'
 import type { Player } from '../api/types'
 import { acknowledgeCrystalShopOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
 import { useStore } from '../app/store'
@@ -106,8 +106,13 @@ function CrystalShop({ playerId, wallet }: { playerId: string; wallet: NonNullab
       } else {
         setNotice({ text: 'Бустер-пак куплен. Обнови баланс.', refresh: 'purchase-confirmed' })
       }
-    } catch {
-      if (api.playerId() === playerId) setNotice(confirmed
+    } catch (cause) {
+      if (api.playerId() !== playerId) return
+      if (!confirmed && cause instanceof ApiError && cause.status === 404) {
+        setNotice({ text: 'Бустер-пак пока недоступен.' })
+        return
+      }
+      setNotice(confirmed
         ? { text: 'Бустер-пак куплен. Обнови баланс.', refresh: 'purchase-confirmed' }
         : { text: 'Не удалось подтвердить покупку. Проверь баланс перед новой покупкой.', refresh: 'purchase-unknown' })
     } finally { finish() }
@@ -151,7 +156,9 @@ function CrystalShop({ playerId, wallet }: { playerId: string; wallet: NonNullab
           <Button disabled={!!busy || !!notice?.refresh || wallet.crystals < boosterCost} onClick={buyBooster}>{busy === 'booster' ? 'Покупаем…' : `Купить за ${boosterCost} 💎`}</Button>
         </section>
         {notice && <p className="crystal-shop-status small" role="status">{notice.text}</p>}
-        {notice?.refresh && <Button secondary disabled={!!busy} onClick={refreshBalance}>{busy === 'refresh' ? 'Обновляем…' : 'Обновить баланс'}</Button>}
+        {notice?.refresh && <Button secondary disabled={!!busy} onClick={refreshBalance}>
+          {busy === 'refresh' ? 'Проверяем…' : notice.refresh === 'purchase-unknown' ? 'Проверить баланс' : 'Обновить баланс'}
+        </Button>}
         <button type="button" className="text-button crystal-shop-close" disabled={!!busy} onClick={() => {
           if (learning && !pending.current) acknowledgeCrystalShopOnboarding()
           close()
