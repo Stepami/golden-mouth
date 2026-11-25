@@ -239,6 +239,7 @@ export const api = {
         return response;
     })),
     exchangeEnergy: async () => data(sdk.bonus.exchangeEnergy()),
+    buyBoosterPack: (): Promise<boolean> => data(sdk.bonus.claimBooster(AbortSignal.timeout(15000))),
     claimOnboardingBonus: (postId: string, signal?: AbortSignal): Promise<boolean> => data(sdk.bonus.claimOnboardingBonus(postId, signal)),
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
