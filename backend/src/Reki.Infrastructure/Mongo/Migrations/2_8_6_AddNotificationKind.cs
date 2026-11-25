@@ -3,12 +3,15 @@ using MongoDB.Driver;
 using Reki.Application.Notifications;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Streaks;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
 
 internal sealed class AddNotificationKind(
-    INotificationContentFactory<PlayerProfile> contentFactory) : RekiMigrationBase
+    INotificationContentFactory<PlayerProfile> contentFactory,
+    INotificationContentFactory<PlayerStreak> streakContentFactory,
+    TimeProvider timeProvider) : RekiMigrationBase
 {
     public override DatabaseVersion Version => new(2, 8, 6);
 
@@ -41,6 +44,31 @@ internal sealed class AddNotificationKind(
                 pending & filters.Eq(item => item.PlayerId, playerId),
                 updates.Set(nameof(Notification.Content), content),
                 cancellationToken: cancellationToken);
+        }
+
+        var streaks = db.GetCollection<PlayerStreak>(MongoCollections.PlayerStreaks);
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var tomorrow = today.AddDays(1);
+        using var active = await streaks.FindAsync(session, item => item.IsActive && item.Count > 0, cancellationToken: cancellationToken);
+        await foreach (var streak in active.ToAsyncEnumerable().WithCancellation(cancellationToken))
+        {
+            var reminderDay = DateOnly.FromDateTime(streak.StartedAt.UtcDateTime).AddDays(streak.Count);
+            if (reminderDay != today && reminderDay != tomorrow)
+            {
+                continue;
+            }
+
+            var player = await players.Find(session, item => item.Id == streak.PlayerId).FirstOrDefaultAsync(cancellationToken);
+            if (player is null || player.NotificationChannels.Count == 0)
+            {
+                continue;
+            }
+
+            var content = await streakContentFactory.GetContent(streak);
+            var sendAt = new DateTimeOffset(reminderDay, new TimeOnly(20, 0), TimeSpan.FromHours(3));
+            var reminders = player.NotificationChannels.Keys.Select(channel =>
+                Notification.New(player.Id, channel, sendAt, content, NotificationKind.Streak));
+            await notifications.InsertManyAsync(session, reminders, cancellationToken: cancellationToken);
         }
     }
 }
