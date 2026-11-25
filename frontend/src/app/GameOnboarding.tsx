@@ -205,7 +205,7 @@ function CrystalShopIntro({ screen }: { screen: string }) {
   }, [screen])
   if (!target?.isConnected) return null
 
-  return <aside className="game-onboarding-progress" aria-label="Знакомство с магазином">
+  return <aside className="game-onboarding-progress crystal-shop-intro" aria-label="Знакомство с магазином">
     <h2>На что потратить кристаллы</h2>
     <p>Нажми на баланс 💎. В магазине можно пополнить энергию или взять карты для постов.</p>
     <div className="row" style={{ gap: 16 }}>

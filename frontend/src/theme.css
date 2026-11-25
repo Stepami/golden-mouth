@@ -512,6 +512,7 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 
 /* One opaque learning dock; actions and the keyboard keep their own layout. */
 .game-onboarding-progress { position: fixed; z-index: 21; bottom: calc(89px + env(safe-area-inset-bottom)); left: max(12px, calc(50% - 215px + 12px)); width: min(406px, calc(100vw - 24px)); padding: 16px 17px 17px; background: #292335; border: 1px solid #554765; border-radius: 20px; box-shadow: 0 10px 30px #0005; }
+body:has([data-crystal-shop]) .crystal-shop-intro { display: none; }
 .app:not(:has(> .tabbar)) .game-onboarding-progress:not(.is-inline) { bottom: calc(12px + env(safe-area-inset-bottom)); }
 .game-onboarding-progress.is-inline { position: relative; inset: auto; transform: none; width: 100%; margin: 0 0 8px; flex: 0 0 100%; order: -1; }
 .game-onboarding-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--soft); }
