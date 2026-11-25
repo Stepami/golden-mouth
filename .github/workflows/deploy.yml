@@ -104,6 +104,10 @@ jobs:
         shell: bash
         run: docker compose up --detach --no-build --remove-orphans --wait --wait-timeout 900
 
+      - name: Reload gateway configuration
+        shell: bash
+        run: bash .github/scripts/reload-openobserve-gateway.sh
+
       - name: Install OpenObserve certificate renewal hook
         shell: bash
         run: |
