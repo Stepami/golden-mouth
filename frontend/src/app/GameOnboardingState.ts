@@ -5,7 +5,7 @@ import { needsRegistration } from '../api/auth'
 
 type Phase = 'setup' | 'post' | 'reaction' | 'reply' | 'done'
 type NextStory = { phase: 'offered' | 'dismissed' } | { phase: 'post' | 'done'; worldId: string; templateId: string }
-export type GameOnboardingState = { phase: Phase; worldId?: string; postId?: string; setupScreen?: string; setupWorld?: string; conversationPostId?: string; replyRequestId?: string; completionSeen?: boolean; bonusClaim?: 'pending' | 'confirmed' | 'uncertain'; nextStory?: NextStory }
+export type GameOnboardingState = { phase: Phase; worldId?: string; postId?: string; setupScreen?: string; setupWorld?: string; conversationPostId?: string; replyRequestId?: string; completionSeen?: boolean; bonusClaim?: 'pending' | 'confirmed' | 'uncertain'; crystalShopIntroPending?: boolean; nextStory?: NextStory }
 export const isGameOnboardingPreview = () => import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'game-onboarding'
 export const isNextStoryPreview = () => import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'next-story'
 const prefix = 'reki:game-onboarding:v1:'
@@ -77,7 +77,11 @@ export function onboardingReplySaved(postId: string, requestId: string) {
 }
 export function acknowledgeGameOnboarding() {
   const id = owner(), state = gameOnboardingState()
-  if (id && state?.phase === 'done') write(id, { ...state, completionSeen: true })
+  if (id && state?.phase === 'done') write(id, { ...state, completionSeen: true, crystalShopIntroPending: true })
+}
+export function acknowledgeCrystalShopOnboarding() {
+  const id = owner(), state = gameOnboardingState()
+  if (id && state?.crystalShopIntroPending) write(id, { ...state, crystalShopIntroPending: false })
 }
 export function gameOnboardingActive(state: GameOnboardingState | undefined) { return !!state && state.phase !== 'done' }
 
@@ -90,7 +94,7 @@ export function setOnboardingBonusClaim(status: GameOnboardingState['bonusClaim'
 
 export function completeGuestOnboarding(playerId: string, worldId: string, postId: string, bonusClaim: GameOnboardingState['bonusClaim']) {
   if (api.playerId() !== playerId) return false
-  const durable = write(playerId, { phase: 'done', worldId, postId, conversationPostId: postId, completionSeen: true, bonusClaim })
+  const durable = write(playerId, { phase: 'done', worldId, postId, conversationPostId: postId, completionSeen: true, crystalShopIntroPending: true, bonusClaim })
   memory.delete(storageId('registration'))
   try { localStorage.removeItem(prefix + storageId('registration')) } catch { /* Optional cleanup. */ }
   return durable
