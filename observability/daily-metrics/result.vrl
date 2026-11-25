@@ -17,6 +17,10 @@ for_each(__DATES__) -> |_, day| {
     "tool_requests": 0,
     "total_users": row.total_users,
     "new_users": row.new_users,
+    "retained_d1": row.retained_d1,
+    "retained_d3": row.retained_d3,
+    "retained_d7": row.retained_d7,
+    "retained_d14": row.retained_d14,
     "is_final": day < today
   })
 }
