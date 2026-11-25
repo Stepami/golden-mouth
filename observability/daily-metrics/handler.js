@@ -2,6 +2,7 @@ import fs from 'fs';
 
 const DAY_MS = 86400000;
 const MSK_OFFSET_MS = 10800000;
+const RETENTION_DAYS = [1, 3, 7, 14];
 const SOURCE_DIR = '/etc/nginx/daily-metrics';
 
 function midnight(date) {
@@ -49,7 +50,9 @@ async function get(r) {
 
     try {
         const sql = fs.readFileSync(SOURCE_DIR + '/query.sql', 'utf8')
-            .replace(/__START_TIME__/g, String(start * 1000));
+            .replace(/__START_TIME__/g, String(start * 1000))
+            .replace(/__END_TIME__/g, String(end * 1000))
+            .replace(/__END_DAY__/g, String((end + MSK_OFFSET_MS) / DAY_MS));
         const dates = [];
         for (let time = start; time < end; time += DAY_MS) {
             dates.push(moscowTime(time).slice(0, 10));
@@ -68,7 +71,7 @@ async function get(r) {
                     sql,
                     query_fn,
                     start_time: (start - DAY_MS) * 1000,
-                    end_time: Math.min(end, now) * 1000 - 1,
+                    end_time: Math.min(end + 14 * DAY_MS, now) * 1000 - 1,
                     size: count,
                 },
                 timeout: 8,
@@ -88,19 +91,27 @@ async function get(r) {
             result.hits.length !== count || result.hits.some((row, i) =>
                 row.date !== dates[i] || typeof row.is_final !== 'boolean' ||
                 [row.dau, row.llm_requests, row.tool_requests, row.total_users, row.new_users]
+                    .concat(RETENTION_DAYS.map(days => row['retained_d' + days]))
                     .some(value => !Number.isSafeInteger(value) || value < 0))) {
             return fail(r, 503, 'Metrics are unavailable for the requested dates');
         }
 
-        const data = result.hits.map(row => ({
-            date: row.date,
-            dau: row.dau,
-            llm_requests: row.llm_requests,
-            tool_requests: row.tool_requests,
-            total_users: row.total_users,
-            new_users: row.new_users,
-            is_final: row.is_final,
-        }));
+        const data = result.hits.map((row, i) => {
+            const day = {
+                date: row.date,
+                dau: row.dau,
+                llm_requests: row.llm_requests,
+                tool_requests: row.tool_requests,
+                total_users: row.total_users,
+                new_users: row.new_users,
+                is_final: row.is_final,
+            };
+            RETENTION_DAYS.forEach(days => {
+                const field = 'retained_d' + days;
+                day[field] = start + (i + days + 1) * DAY_MS <= now ? row[field] : null;
+            });
+            return day;
+        });
         r.return(200, JSON.stringify({
             startup_id: '29378',
             timezone: 'Europe/Moscow',
