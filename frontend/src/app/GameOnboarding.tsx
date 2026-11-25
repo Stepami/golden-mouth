@@ -187,15 +187,22 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
 }
 
 function CrystalShopIntro({ screen }: { screen: string }) {
-  const { player } = useStore()
-  const hasWallet = Boolean(player?.energyWallet)
   const [target, setTarget] = useState<HTMLButtonElement | null>(null)
   useLayoutEffect(() => {
-    const button = document.querySelector<HTMLButtonElement>('[data-crystal-shop-trigger]')
-    setTarget(button)
-    button?.classList.add('game-onboarding-target')
-    return () => button?.classList.remove('game-onboarding-target')
-  }, [screen, hasWallet])
+    let button: HTMLButtonElement | null = null
+    const syncTarget = () => {
+      const next = document.querySelector<HTMLButtonElement>('[data-crystal-shop-trigger]')
+      if (next === button) return
+      button?.classList.remove('game-onboarding-target')
+      button = next
+      button?.classList.add('game-onboarding-target')
+      setTarget(button)
+    }
+    syncTarget()
+    const observer = new MutationObserver(syncTarget)
+    observer.observe(document.querySelector('.app') ?? document.body, { childList: true, subtree: true })
+    return () => { observer.disconnect(); button?.classList.remove('game-onboarding-target') }
+  }, [screen])
   if (!target?.isConnected) return null
 
   return <aside className="game-onboarding-progress" aria-label="Знакомство с магазином">
