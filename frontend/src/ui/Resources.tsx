@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { api, ApiError } from '../api/client'
 import type { Player } from '../api/types'
@@ -29,7 +29,8 @@ export function Resources({ player }: { player: Player }) {
 
 const boosterCost = 6
 type ShopAction = 'energy' | 'booster' | 'refresh'
-type ShopNotice = { text: string; refresh?: 'purchase-confirmed' | 'purchase-unknown' }
+type PurchaseRecovery = 'purchase-confirmed' | 'purchase-unknown'
+type ShopNotice = { text: string; refresh?: PurchaseRecovery }
 
 function CrystalShop({ playerId, wallet }: { playerId: string; wallet: NonNullable<Player['energyWallet']> }) {
   const { patch, refresh } = useStore()
@@ -49,6 +50,33 @@ function CrystalShop({ playerId, wallet }: { playerId: string; wallet: NonNullab
     dialog.current?.focus()
     return () => button?.focus()
   }, [open])
+
+  const reconcileWallet = useCallback(async (recovery: PurchaseRecovery) => {
+    if (api.playerId() !== playerId) return
+    const latest = await refresh()
+    if (api.playerId() !== playerId) return
+    if (latest?.id !== playerId || !latest.energyWallet) {
+      setNotice({
+        text: recovery === 'purchase-confirmed'
+          ? 'Бустер-пак куплен. Проверим баланс автоматически.'
+          : 'Покупка пока не подтверждена. Проверим баланс автоматически.',
+        refresh: recovery,
+      })
+      return
+    }
+    setNotice({
+      text: recovery === 'purchase-confirmed'
+        ? 'Бустер-пак куплен. Карты добавлены.'
+        : 'Покупка не подтверждена. Баланс обновлён.',
+    })
+  }, [playerId, refresh])
+
+  useEffect(() => {
+    const recovery = notice?.refresh
+    if (!open || busy || !recovery) return
+    const timer = window.setTimeout(() => { void reconcileWallet(recovery) }, 5000)
+    return () => window.clearTimeout(timer)
+  }, [open, busy, notice, reconcileWallet])
 
   const close = () => {
     if (!pending.current) setOpen(false)
@@ -90,42 +118,27 @@ function CrystalShop({ playerId, wallet }: { playerId: string; wallet: NonNullab
   async function buyBooster() {
     if (wallet.crystals < boosterCost || notice?.refresh || !start('booster')) return
     setNotice(null)
-    let confirmed = false
     try {
-      const bought = await api.buyBoosterPack()
-      if (api.playerId() !== playerId) return
-      if (bought === false) {
-        setNotice({ text: 'Для бустер-пака не хватает кристаллов.' })
-        return
+      let recovery: PurchaseRecovery = 'purchase-unknown'
+      try {
+        const bought = await api.buyBoosterPack()
+        if (api.playerId() !== playerId) return
+        if (bought === false) {
+          setNotice({ text: 'Для бустер-пака не хватает кристаллов.' })
+          return
+        }
+        if (bought === true) recovery = 'purchase-confirmed'
+      } catch (cause) {
+        if (api.playerId() !== playerId) return
+        if (cause instanceof ApiError && cause.status === 404) {
+          setNotice({ text: 'Бустер-пак пока недоступен.' })
+          return
+        }
       }
-      if (bought !== true) throw new Error('Booster purchase was not confirmed')
-      confirmed = true
-      const latest = await refresh()
-      if (latest?.id === playerId && latest.energyWallet) {
-        setNotice({ text: 'Бустер-пак куплен. Карты добавлены.' })
-      } else {
-        setNotice({ text: 'Бустер-пак куплен. Обнови баланс.', refresh: 'purchase-confirmed' })
-      }
-    } catch (cause) {
-      if (api.playerId() !== playerId) return
-      if (!confirmed && cause instanceof ApiError && cause.status === 404) {
-        setNotice({ text: 'Бустер-пак пока недоступен.' })
-        return
-      }
-      setNotice(confirmed
-        ? { text: 'Бустер-пак куплен. Обнови баланс.', refresh: 'purchase-confirmed' }
-        : { text: 'Не удалось подтвердить покупку. Проверь баланс перед новой покупкой.', refresh: 'purchase-unknown' })
-    } finally { finish() }
-  }
-  async function refreshBalance() {
-    if (!notice?.refresh || !start('refresh')) return
-    try {
-      const latest = await refresh()
-      if (latest?.id !== playerId || !latest.energyWallet) {
-        setNotice({ ...notice, text: 'Не удалось обновить баланс. Проверь подключение и попробуй ещё раз.' })
-        return
-      }
-      setNotice({ text: notice.refresh === 'purchase-confirmed' ? 'Бустер-пак куплен. Баланс обновлён.' : 'Баланс обновлён.' })
+
+      setBusy('refresh')
+      setNotice({ text: 'Сверяем баланс…' })
+      await reconcileWallet(recovery)
     } finally { finish() }
   }
   return <>
@@ -156,9 +169,6 @@ function CrystalShop({ playerId, wallet }: { playerId: string; wallet: NonNullab
           <Button disabled={!!busy || !!notice?.refresh || wallet.crystals < boosterCost} onClick={buyBooster}>{busy === 'booster' ? 'Покупаем…' : `Купить за ${boosterCost} 💎`}</Button>
         </section>
         {notice && <p className="crystal-shop-status small" role="status">{notice.text}</p>}
-        {notice?.refresh && <Button secondary disabled={!!busy} onClick={refreshBalance}>
-          {busy === 'refresh' ? 'Проверяем…' : notice.refresh === 'purchase-unknown' ? 'Проверить баланс' : 'Обновить баланс'}
-        </Button>}
         <button type="button" className="text-button crystal-shop-close" disabled={!!busy} onClick={() => {
           if (learning && !pending.current) acknowledgeCrystalShopOnboarding()
           close()
