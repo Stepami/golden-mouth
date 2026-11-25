@@ -622,7 +622,7 @@ export function Thread() {
         {guest ? <>
           <EnergyBadge value={player.postsLeft} />
           <span className="crystal-button thread-crystal-count" role="status" aria-label={`Кристаллы в демо: ${guest.crystals}`}>💎 {guest.crystals}</span>
-        </> : <Resources player={player} />}
+        </> : store.player && <Resources player={store.player} />}
         {!guest?.replySubmitted && <button className="thread-exit" onClick={goBack}>{fromMarked ? 'К отметкам →' : fromFeed ? 'В ленту →' : 'В канал →'}</button>}
       </div>} />
       <div className="pad">
