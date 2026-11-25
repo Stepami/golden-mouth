@@ -42,9 +42,12 @@ internal sealed class MongoPlayerRepository(
 
     public async IAsyncEnumerable<PlayerProfile> GetActivePlayersAsync(
         DateTimeOffset since,
+        DateOnly challengeDay,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.Gte(item => item.LastSeenAt, since);
+        var filters = Builders<PlayerProfile>.Filter;
+        var filter = filters.Gte(item => item.LastSeenAt, since) &
+                     filters.Ne(item => item.DailyChallenge.Day, challengeDay);
         using var cursor = await _players.FindAsync(
             filter,
             cancellationToken: cancellationToken);

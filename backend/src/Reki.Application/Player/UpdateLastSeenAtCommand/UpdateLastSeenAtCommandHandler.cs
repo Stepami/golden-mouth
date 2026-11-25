@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Caching.Memory;
 using Reki.Application.Notifications;
 using Reki.Domain.Notifications;
+using Reki.Domain.Player;
 
 namespace Reki.Application.Player.UpdateLastSeenAtCommand;
 
@@ -10,6 +11,7 @@ internal sealed class UpdateLastSeenAtCommandHandler(
     INotificationRepository notifications,
     IUnitOfWork unitOfWork,
     IMemoryCache cache,
+    INotificationContentFactory<PlayerProfile> notificationContentFactory,
     TimeProvider timeProvider)
     : ICommandHandler<UpdateLastSeenAt>
 {
@@ -35,11 +37,13 @@ internal sealed class UpdateLastSeenAtCommandHandler(
                     var pending = await notifications.GetPendingAsync(player.Id, type, token);
                     if (pending is null)
                     {
-                        await notifications.SaveAsync(Notification.New(player.Id, type, sendAt), token);
+                        var content = await notificationContentFactory.GetContent(player);
+                        await notifications.SaveAsync(Notification.New(player.Id, type, sendAt, content), token);
                     }
                     else if (player.LastSeenAt - oldLastSeenAt >= TimeSpan.FromHours(2))
                     {
-                        pending.Reschedule(sendAt);
+                        var content = await notificationContentFactory.GetContent(player);
+                        pending.Reschedule(sendAt, content);
                         await notifications.SaveAsync(pending, token);
                     }
                 }

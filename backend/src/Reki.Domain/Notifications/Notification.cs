@@ -9,28 +9,33 @@ public sealed class Notification(
     NotificationStatus status,
     DateTimeOffset sendAt,
     string content,
-    int version = 0)
+    int version = 0,
+    NotificationKind kind = NotificationKind.Regular)
 {
-    public const string DefaultContent = "Пора попадать в РЕКИ! Заходи в игру и пиши посты - тебя ждёт успех!";
+    private const string DefaultContent = "Пора попадать в РЕКИ! Заходи в игру и пиши посты - тебя ждёт успех!";
 
     public NotificationId Id { get; private set; } = id;
     public PlayerId PlayerId { get; private set; } = playerId;
     public NotificationChannelType ChannelType { get; private set; } = channelType;
+    public NotificationKind Kind { get; private set; } = kind;
     public NotificationStatus Status { get; private set; } = status;
     public DateTimeOffset SendAt { get; private set; } = sendAt;
     public string Content { get; private set; } = content;
     public int Version { get; private set; } = version;
 
-    public static Notification New(PlayerId playerId, NotificationChannelType channelType, DateTimeOffset sendAt, string content = DefaultContent) =>
-        new(NotificationId.From(sendAt), playerId, channelType, NotificationStatus.Pending, sendAt, content);
+    public static Notification New(
+        PlayerId playerId,
+        NotificationChannelType channelType,
+        DateTimeOffset sendAt,
+        string content = DefaultContent,
+        NotificationKind kind = NotificationKind.Regular) =>
+        new(NotificationId.From(sendAt), playerId, channelType, NotificationStatus.Pending, sendAt, content, kind: kind);
 
-    public void Reschedule(DateTimeOffset sendAt)
+    public void Reschedule(DateTimeOffset sendAt, string content)
     {
-        if (SendAt != sendAt)
-        {
-            SendAt = sendAt;
-            Version++;
-        }
+        SendAt = sendAt;
+        Version++;
+        Content = content;
     }
 
     public void Complete(NotificationStatus result)

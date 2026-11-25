@@ -125,7 +125,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var players = Database.GetCollection<PlayerProfile>("players");
         var notifications = Database.GetCollection<Notification>("notifications");
         var pending = await notifications
-            .Find(item => item.PlayerId == response.Id && item.Status == NotificationStatus.Pending)
+            .Find(item => item.PlayerId == response.Id && item.Kind == NotificationKind.Regular && item.Status == NotificationStatus.Pending)
             .SingleAsync();
         var initialSendAt = now.AddDays(2);
         await notifications.UpdateOneAsync(item => item.Id == pending.Id, Builders<Notification>.Update.Set(item => item.SendAt, initialSendAt));
@@ -142,7 +142,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(player.LastSeenAt).IsEqualTo(now);
         await Assert
             .That(await notifications.CountDocumentsAsync(item =>
-                item.PlayerId == response.Id && item.Status == NotificationStatus.Pending)).IsEqualTo(1L);
+                item.PlayerId == response.Id && item.Kind == NotificationKind.Regular && item.Status == NotificationStatus.Pending)).IsEqualTo(1L);
     }
 
     [Test]
@@ -176,7 +176,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var players = Database.GetCollection<PlayerProfile>("players");
         var notifications = Database.GetCollection<Notification>("notifications");
         var pending = await notifications
-            .Find(item => item.PlayerId == response.Id && item.Status == NotificationStatus.Pending)
+            .Find(item => item.PlayerId == response.Id && item.Kind == NotificationKind.Regular && item.Status == NotificationStatus.Pending)
             .SingleAsync();
         await players.UpdateOneAsync(
             item => item.Id == response.Id,

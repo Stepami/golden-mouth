@@ -22,7 +22,11 @@ internal sealed class MongoNotificationRepository(
         CancellationToken cancellationToken) =>
         await _notifications.Find(
                 sessionProvider.Session,
-                item => item.PlayerId == playerId && item.ChannelType == channelType && item.Status == NotificationStatus.Pending)
+                item =>
+                    item.PlayerId == playerId &&
+                    item.ChannelType == channelType &&
+                    item.Status == NotificationStatus.Pending &&
+                    item.Kind == NotificationKind.Regular)
             .FirstOrDefaultAsync(cancellationToken);
 
     public async IAsyncEnumerable<Notification> GetDueAsync(

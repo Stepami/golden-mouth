@@ -248,6 +248,7 @@ internal static partial class MongoClassMappings
             configure: classMap =>
             {
                 classMap.MapMember(item => item.ChannelType).SetDefaultValue(default(NotificationChannelType));
+                classMap.MapMember(item => item.Kind).SetDefaultValue(NotificationKind.Regular);
                 classMap.MapMember(item => item.SendAt).SetSerializer(new DateTimeOffsetSerializer(BsonType.DateTime));
                 classMap.MapMember(item => item.Version).SetDefaultValue(0);
                 classMap.MapCreator(item => new Notification(
@@ -257,7 +258,8 @@ internal static partial class MongoClassMappings
                     item.Status,
                     item.SendAt,
                     item.Content,
-                    item.Version));
+                    item.Version,
+                    item.Kind));
             });
     }
 
