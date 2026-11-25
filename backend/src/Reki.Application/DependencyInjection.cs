@@ -76,6 +76,7 @@ public static class DependencyInjection
         services.AddSingleton<IWorldPlayerCache, WorldPlayerCache>();
 
         services.AddSingleton<INotificationContentFactory<PlayerProfile>, RegularContentFactory>();
+        services.AddSingleton<INotificationContentFactory<DateOnly>, ChallengeContentFactory>();
 
         return services;
     }

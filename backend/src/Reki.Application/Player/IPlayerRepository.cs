@@ -31,7 +31,7 @@ public interface IPlayerRepository
 
     IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(int cap, DateTimeOffset dueBefore, CancellationToken cancellationToken);
 
-    IAsyncEnumerable<PlayerProfile> GetActivePlayersAsync(DateTimeOffset since, CancellationToken cancellationToken);
+    IAsyncEnumerable<PlayerProfile> GetActivePlayersAsync(DateTimeOffset since, DateOnly challengeDay, CancellationToken cancellationToken);
 
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 }
