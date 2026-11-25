@@ -109,7 +109,14 @@ function Invite() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Позвать друзей" />
       <div className="pad">
-        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Когда друг зарегистрируется по твоей ссылке, создание мира откроется, а вы оба получите кристаллы.</p></Card>
+        <Card style={{ marginBottom: 20 }}>
+          <b>Награда за регистрацию друга</b>
+          <p style={{ marginTop: 8 }}>Когда друг зарегистрируется по твоей ссылке, ты получишь 3 💎 и реферальный бустер-пак. Откроется создание своего мира.</p>
+          <div className="small muted" style={{ marginTop: 8 }}>
+            <div>2 виральные карты ×5</div>
+            <div>2 флоп-гарда +10 просмотров</div>
+          </div>
+        </Card>
         <div className="label">Друг увидит твою карточку</div>
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
           <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>

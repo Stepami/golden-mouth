@@ -7,7 +7,7 @@ import { useNav } from './nav'
 import { useStore } from './store'
 import { pendingLandingWorld } from './landing/experiment'
 import { getWorldDraft } from './worldDraft'
-import { acknowledgeGameOnboarding, gameOnboardingState, setOnboardingBonusClaim, beginGameOnboardingPreview, onboardingPostSaved, onboardingReplySaved, updateGameOnboarding, useGameOnboarding, isGameOnboardingPreview } from './GameOnboardingState'
+import { acknowledgeCrystalShopOnboarding, acknowledgeGameOnboarding, gameOnboardingState, setOnboardingBonusClaim, beginGameOnboardingPreview, onboardingPostSaved, onboardingReplySaved, updateGameOnboarding, useGameOnboarding, isGameOnboardingPreview } from './GameOnboardingState'
 
 export { isGameOnboardingPreview } from './GameOnboardingState'
 
@@ -186,6 +186,35 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
   return host ? createPortal(dock, host) : dock
 }
 
+function CrystalShopIntro({ screen }: { screen: string }) {
+  const [target, setTarget] = useState<HTMLButtonElement | null>(null)
+  useLayoutEffect(() => {
+    let button: HTMLButtonElement | null = null
+    const syncTarget = () => {
+      const next = document.querySelector<HTMLButtonElement>('[data-crystal-shop-trigger]')
+      if (next === button) return
+      button?.classList.remove('game-onboarding-target')
+      button = next
+      button?.classList.add('game-onboarding-target')
+      setTarget(button)
+    }
+    syncTarget()
+    const observer = new MutationObserver(syncTarget)
+    observer.observe(document.querySelector('.app') ?? document.body, { childList: true, subtree: true })
+    return () => { observer.disconnect(); button?.classList.remove('game-onboarding-target') }
+  }, [screen])
+  if (!target?.isConnected) return null
+
+  return <aside className="game-onboarding-progress crystal-shop-intro" aria-label="Знакомство с магазином">
+    <h2>На что потратить кристаллы</h2>
+    <p>Нажми на баланс 💎. В магазине можно пополнить энергию или взять карты для постов.</p>
+    <div className="row" style={{ gap: 16 }}>
+      <button type="button" onClick={() => target.click()}>Открыть магазин</button>
+      <button type="button" onClick={acknowledgeCrystalShopOnboarding}>Пропустить</button>
+    </div>
+  </aside>
+}
+
 export function GameOnboarding({ lockedSection = false }: { lockedSection?: boolean }) {
   const state = useGameOnboarding(), nav = useNav(), { player } = useStore()
   useEffect(() => { beginGameOnboardingPreview(player?.worldInstanceId ?? player?.world) }, [player?.id, player?.worldInstanceId])
@@ -215,8 +244,10 @@ export function GameOnboarding({ lockedSection = false }: { lockedSection?: bool
     }).catch(() => { /* Keep the step; the thread provides retry. */ })
     return () => { active = false }
   }, [state?.postId, state?.conversationPostId, state?.replyRequestId, player?.id])
-  if (!state || state.completionSeen) return null
+  if (!state) return null
   const screen = nav.current
+  if (state.completionSeen) return state.crystalShopIntroPending && ['01-3_world', '03-5_stage', '02-6_thread'].includes(screen)
+    ? <CrystalShopIntro screen={screen} /> : null
   const routePostId = (nav.params.post as { id?: string } | undefined)?.id ?? nav.params.postId ?? (nav.params.result as { postId?: string } | undefined)?.postId
   const setup = state.phase === 'setup'
   const sameWorld = !state.worldId || state.worldId === (player?.worldInstanceId ?? player?.world)

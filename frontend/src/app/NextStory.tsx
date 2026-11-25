@@ -97,7 +97,7 @@ function NextStoryOffer({ player }: { player: Player }) {
 export function NextStoryChannelOffer({ player }: { player: Player }) {
   const story = useNextStory(), original = useGameOnboarding()
   if (story && story.phase !== 'offered') return null
-  if (original && !original.completionSeen) return null
+  if (original && (!original.completionSeen || (original.crystalShopIntroPending && player.energyWallet))) return null
   const completedHere = original?.phase === 'done' && original.worldId === (player.worldInstanceId ?? player.world) && original.completionSeen
   if (!isNextStoryPreview() && (isGameOnboardingPreview() || !completedHere)) return null
   return <NextStoryOffer player={player} />
