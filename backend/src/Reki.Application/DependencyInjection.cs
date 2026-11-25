@@ -20,6 +20,7 @@ using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Streaks;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -77,6 +78,7 @@ public static class DependencyInjection
 
         services.AddSingleton<INotificationContentFactory<PlayerProfile>, RegularContentFactory>();
         services.AddSingleton<INotificationContentFactory<DateOnly>, ChallengeContentFactory>();
+        services.AddSingleton<INotificationContentFactory<PlayerStreak>, StreakContentFactory>();
 
         return services;
     }
