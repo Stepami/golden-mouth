@@ -89,7 +89,6 @@ internal sealed class CreatePostCommandHandler(
                 var hitOwnMilestone = player.HitOwnWorldMilestone || world.Player.Subscribers >= currentBalance.OwnWorldSubscribers;
                 player.SpendPost(progression.Skills, currentBalance.PostEnergyCost, now, hitOwnMilestone);
 
-                await players.ReplacePlayerAsync(player, token);
                 await worlds.ReplaceWorldAsync(world, token);
                 await posts.InsertPostAsync(post, token);
 
