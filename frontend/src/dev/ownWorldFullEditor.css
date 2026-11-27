@@ -1,0 +1,203 @@
+.voice-portraits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 14px;
+  list-style: none;
+}
+
+.voice-portraits li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.voice-portraits b,
+.voice-portraits small {
+  display: block;
+  font-size: 13px;
+}
+
+.voice-portraits small {
+  color: var(--muted);
+}
+
+.voice-portrait {
+  display: block;
+  flex: none;
+  border-radius: 50%;
+  background: var(--card2);
+}
+
+.voice-portrait-placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--grad);
+  font-weight: 700;
+}
+
+.voice-full .editor-section-head {
+  padding: 10px 14px;
+  min-height: 56px;
+  overflow-wrap: anywhere;
+}
+
+.voice-full .editor-section-head > span:first-child {
+  gap: 3px;
+}
+
+.voice-full .editor-section-head::after {
+  content: '+';
+  flex: none;
+  color: var(--lilac);
+}
+
+.voice-full .editor-section-head[aria-expanded='true']::after {
+  content: '−';
+}
+
+.voice-full .editor-section-body {
+  padding: 0 14px 14px;
+  align-content: start;
+}
+
+.voice-full-fields,
+.voice-full-list-item,
+.voice-quick-characters,
+.voice-quick-character-fields,
+.voice-achievement-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.voice-full-fields[hidden] {
+  display: none;
+}
+
+.voice-quick-character-list,
+.voice-achievements {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  list-style: none;
+}
+
+.voice-quick-character,
+.voice-achievement {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--card2);
+  text-align: left;
+}
+
+.voice-quick-character[aria-expanded='true'],
+.voice-achievement[aria-pressed='true'] {
+  border-color: var(--lilac);
+}
+
+.voice-full .editor-section-head:focus-visible,
+.voice-quick-character:focus-visible,
+.voice-achievement:focus-visible {
+  outline: 2px solid var(--lilac);
+  outline-offset: -3px;
+}
+
+.voice-quick-character-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.voice-quick-character-copy > * {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-quick-character-copy small {
+  color: var(--muted);
+}
+
+.voice-edit-mark {
+  flex: none;
+  color: var(--lilac);
+}
+
+.voice-quick-character-fields,
+.voice-achievement-fields {
+  padding: 10px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+}
+
+.voice-quick-character-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+
+.voice-quick-character-actions button,
+.voice-achievement-fields > button {
+  min-height: 36px;
+}
+
+.voice-achievement {
+  font-size: 13px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.voice-achievement-fields > button {
+  justify-self: end;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .voice-full-fields:not([hidden]),
+  .voice-quick-character-fields,
+  .voice-achievement-fields,
+  .voice-edit-row {
+    animation: voice-editor-enter 140ms ease-out;
+  }
+
+  @keyframes voice-editor-enter {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+.voice-full .editor-extra {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.voice-list-fields > .voice-field + .voice-field {
+  margin-top: 9px;
+}
+
+.voice-full-list-item + .voice-full-list-item {
+  margin-top: 7px;
+}
+
+.voice-full .voice-full-list-item .text-link {
+  justify-self: start;
+  padding-block: 5px;
+}
+
+.voice-full .voice-field select {
+  margin: 0;
+  font-size: 16px;
+}
+
+.voice-full-back {
+  justify-self: center;
+}
