@@ -218,12 +218,23 @@ summary { cursor: pointer; padding: 6px 0; font-weight: 700; }
 .editor-section-body { padding: 0 18px 18px; }
 .editor-section-body > p { margin: 0 0 16px; }
 .world-editor-title { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; }
+.world-editor-title:has(.world-help-button) { grid-template-columns: 84px minmax(0, 1fr); }
 .world-editor-preview { display: flex; align-items: flex-start; gap: 12px; background: var(--card2); overflow-wrap: anywhere; }
 .world-editor-preview > span { display: grid; place-content: center; width: 46px; min-height: 46px; flex: none; font-size: 24px; background: var(--bg); border-radius: 12px; }
 .world-editor-preview b { font-size: 17px; }
 .world-editor-preview p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .world-field { min-width: 0; margin: 12px 0; }
 .world-field .label { display: block; font-size: 13px; letter-spacing: normal; text-transform: none; margin-bottom: 5px; }
+.world-field-label { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.world-field-label .label, .world-field-label p, .editor-extra .world-field-label p { margin: 0; }
+.world-field-label .label { letter-spacing: normal; text-transform: none; }
+.world-field-label h2 { font-size: 18px; }
+.world-help-button { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #9b6bff66; border-radius: 50%; background: var(--card2); color: var(--lilac); font-size: 14px; font-weight: 700; }
+.world-help-button:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; }
+.world-editor-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.world-editor-copy > p { margin-top: 6px; overflow-wrap: anywhere; }
+.world-drama-label { margin-top: 14px; }
+.world-drama-label + .drama-options { margin-top: 8px; }
 .world-field input, .world-field textarea { display: block; padding: 9px 10px; min-height: 42px; background: var(--bg); border: 1px solid var(--line2); border-radius: 10px; font-size: 16px; }
 .world-field textarea { resize: vertical; }
 .world-field :is(input, textarea, button):focus { outline: 2px solid var(--lilac); outline-offset: 2px; }
@@ -251,13 +262,6 @@ summary { cursor: pointer; padding: 6px 0; font-weight: 700; }
 .own-world-role .editor-preview p { margin-top: 4px; }
 .own-persona-options .persona-option:last-child { margin-bottom: 0; }
 .own-persona-options .persona-option:disabled { color: var(--muted); cursor: default; }
-.own-role-options { border: 0; min-width: 0; }
-.own-role-options legend { margin-bottom: 8px; font-weight: 700; }
-.own-role-options .persona-option { margin-bottom: 8px; }
-.own-role-options .persona-option:last-child { margin-bottom: 0; }
-.own-role-options .persona-option:has(input:checked) { border-color: var(--lilac); background: var(--card2); }
-.own-role-options input { width: 18px; height: 18px; flex: none; accent-color: var(--accent2); }
-.own-role-options input:focus-visible { outline: 2px solid var(--lilac); outline-offset: 3px; }
 .own-world-arrival > .pad { padding-top: 32px; }
 .own-world-arrival h1 { margin-top: -10px; }
 .own-world-arrival h2 { font-size: 16px; }
@@ -395,6 +399,17 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .world-switch-dialog { margin: auto; color: var(--text); background: #1A1A24; border: 1px solid var(--line); border-radius: 26px; padding: 22px; width: calc(100% - 32px); max-width: 398px; max-height: 85dvh; overflow: auto; }
 .world-switch-dialog::backdrop { background: #08080ca6; }
 .world-switch-dialog button { margin-top: 12px; }
+.world-help-dialog { padding: 0; overscroll-behavior: contain; }
+.world-help-sheet { display: grid; gap: 12px; padding: 20px; overflow-wrap: anywhere; }
+.world-help-sheet h2 { font-size: 20px; }
+.world-help-example { display: grid; gap: 6px; }
+.world-help-example .card { display: grid; gap: 6px; }
+.world-help-example .world-editor-preview { display: flex; gap: 10px; }
+.world-help-idea { margin: 0; }
+.world-help-achievement { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.world-help-achievement > div { width: 60px; text-align: center; }
+.world-help-achievement .slot { display: grid; place-items: center; margin-bottom: 4px; font-size: 22px; }
+.world-help-sheet > .btn { margin-top: 0; }
 
 .daily-tasks { border: 0; padding: 0; margin-bottom: 18px; min-width: 0; }
 .daily-tasks legend { font-size: 18px; font-weight: 700; }

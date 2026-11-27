@@ -122,12 +122,19 @@ export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
     nav.push('01-4b_world_setup', nextStory ? { nextStory, world: d.templateId } : undefined)
   }} /></div>
 }
-export function DifficultyPicker({ definition }: { definition: WorldDefinition }) {
-  return <section><h2>Сложность</h2><Segmented value={definition.difficulty} onChange={difficulty => updateWorldDraft({ difficulty })} options={[{ id: 'easy', label: 'Легко' }, { id: 'normal', label: 'Средне' }, { id: 'hard', label: 'Сложно' }]} /><p className="small muted">Чем сложнее, тем быстрее рост подписчиков и выше риск провала. Изменение действует на следующие действия.</p></section>
+export function DifficultyPicker({ definition, info }: { definition: WorldDefinition; info?: ReactNode }) {
+  return <section>
+    {info ? <div className="world-field-label"><h2>Сложность</h2>{info}</div> : <h2>Сложность</h2>}
+    <Segmented value={definition.difficulty} onChange={difficulty => updateWorldDraft({ difficulty })} options={[{ id: 'easy', label: 'Легко' }, { id: 'normal', label: 'Средне' }, { id: 'hard', label: 'Сложно' }]} />
+    {!info && <p className="small muted">Чем сложнее, тем быстрее рост подписчиков и выше риск провала. Изменение действует на следующие действия.</p>}
+  </section>
 }
 
-export function DramaPicker({ definition: d, beforeOptions, withDifficulty = true, fixed = false }: { definition: WorldDefinition; beforeOptions?: ReactNode; withDifficulty?: boolean; fixed?: boolean }) {
-  return <>{withDifficulty && <DifficultyPicker definition={d} />}<h1>Сколько драмы добавим?</h1><p className="muted">{fixed ? 'В пробной истории доступно «Мягко». Остальные варианты откроются после входа.' : 'Выбери настроение истории. Его можно изменить позже.'}</p>{beforeOptions}<div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} disabled={fixed && d.drama !== option.id} onClick={fixed ? undefined : () => { tap('world_choose_mood', { kind: option.id }); updateWorldDraft({ drama: option.id }) }} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b>{(!fixed || d.drama === option.id) && <p>{option.description}</p>}{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : fixed ? '🔒' : ''}</span></button>)}</div></>
+export function DramaPicker({ definition: d, beforeOptions, withDifficulty = true, fixed = false, info }: { definition: WorldDefinition; beforeOptions?: ReactNode; withDifficulty?: boolean; fixed?: boolean; info?: ReactNode }) {
+  return <>{withDifficulty && <DifficultyPicker definition={d} />}
+    {info ? <div className="world-field-label world-drama-label"><h2>Градус драмы</h2>{info}</div> : <><h1>Сколько драмы добавим?</h1><p className="muted">{fixed ? 'В пробной истории доступно «Мягко». Остальные варианты откроются после входа.' : 'Выбери настроение истории. Его можно изменить позже.'}</p></>}
+    {beforeOptions}<div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} disabled={fixed && d.drama !== option.id} onClick={fixed ? undefined : () => { tap('world_choose_mood', { kind: option.id }); updateWorldDraft({ drama: option.id }) }} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b>{(!fixed || d.drama === option.id) && <p>{option.description}</p>}{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : fixed ? '🔒' : ''}</span></button>)}</div>
+  </>
 }
 export function WorldPrototypePreview() {
   const draft = useWorldDraft(); const nav = useNav()

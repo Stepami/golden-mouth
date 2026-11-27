@@ -23,7 +23,7 @@ function WorldDetailsScreen() {
       const world = (await api.ownedWorlds()).find(item => item.id === p.worldInstanceId)
       if (!world) throw new Error('World not found')
       const { id, subscribers: _subscribers, lock: _lock, ...definition } = world
-      selectDraftOwner(p.id); setWorldDraft({ definition: { ...definition, templateId: null, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }, advanced: false, editingId: id, customEditing: custom, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, personalizeAvatar: avatarPersonalization(p.id) })
+      selectDraftOwner(p.id); setWorldDraft({ definition: { ...definition, templateId: null, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }, advanced: custom, editingId: id, customEditing: custom, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, personalizeAvatar: avatarPersonalization(p.id) })
       nav.push('05-7b_own_world', { world: p.world })
     } catch { setError('Не получилось загрузить настройки. Попробуй ещё раз.') } finally { setLoading(false) }
   }

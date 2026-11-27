@@ -17,7 +17,7 @@ import { worldDefinitionOf, worldDocumentOf, worlds } from '../api/worldContent'
 import type { Player, WorldDefinition, WorldDocument } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
-import { blankWorld, clearWorldDrafts, getWorldDraft, isOwnWorldSetup, savedWorldDraft, selectDraftOwner, setWorldDraft, useWorldDraft, withPersona, type WorldDraft } from '../app/worldDraft'
+import { blankWorld, clearWorldDrafts, getWorldDraft, isOwnWorldSetup, ownWorldRole, savedWorldDraft, selectDraftOwner, setWorldDraft, useWorldDraft, withPersona, type WorldDraft } from '../app/worldDraft'
 import { pendingReferral, clearReferral } from '../app/referral'
 import { Avatar, BottomCTA, Button, TopBar, fmt, plural } from '../ui'
 import { WorldAdvanced } from './worldAdvanced'
@@ -107,7 +107,7 @@ function Ready({ children }: { children: (draft: NonNullable<ReturnType<typeof u
 export function ChannelSetup() {
   return <Ready>{draft => draft.advanced ? <StarsForm draft={draft} /> : <QuickChannelForm draft={draft} />}</Ready>
 }
-export function DescriptionSetup() { return <Ready>{draft => draft.advanced || isOwnWorldSetup(draft) ? <StarsForm draft={draft} /> : <QuickWorldForm draft={draft} />}</Ready> }
+export function DescriptionSetup() { return <Ready>{draft => draft.advanced || draft.customEditing || isOwnWorldSetup(draft) ? <StarsForm draft={draft} /> : <QuickWorldForm draft={draft} />}</Ready> }
 export function VoiceSetup() { return <Ready>{draft => <StarsForm draft={draft} quick={!draft.advanced} />}</Ready> }
 export function AdvancedSetup() { return <Ready>{draft => <StarsForm draft={draft} />}</Ready> }
 export function StarsSetup() { return <Ready>{draft => <StarsForm draft={draft} />}</Ready> }
@@ -119,15 +119,15 @@ function heroPersonaAvatar(star: WorldDefinition['stars'][number]) {
 function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typeof useWorldDraft>>; quick?: boolean }) {
   const nav = useNav(); const { setPlayer } = useStore(); const d = draft.definition
   const own = isOwnWorldSetup(draft)
+  const ownRole = own || draft.customEditing ? ownWorldRole(draft) : d.role
   const nextStory = nav.params.nextStory === true
   const [confirmRole, setConfirmRole] = useState(!!draft.createdWorldId)
   const [editRole, setEditRole] = useState(false)
-  const roles = [...new Set([d.role, ...d.roles].map(role => role.trim()).filter(Boolean))]
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [uncertain, setUncertain] = useState(false)
   useEffect(() => { if (error) document.querySelector('[role="alert"]')?.scrollIntoView({ block: 'nearest' }) }, [error])
   const devPreview = import.meta.env.DEV && new URLSearchParams(location.search).has('screen') && !hasAccess() && !needsRegistration()
   const checkWorlds = () => nav.replace('01-3_world')
-  const save = async (role = d.role, hero?: WorldDefinition['stars'][number]) => {
+  const save = async (role = ownRole, hero?: WorldDefinition['stars'][number]) => {
     if (saving || uncertain) return
     if (draft.previewOnly || devPreview) { nav.push('05-7c_world_preview'); return }
     const nextStoryPlayerId = nextStory ? api.playerId() : undefined
@@ -140,9 +140,8 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       emoji: d.emoji.trim() || '✨',
       summary: d.summary.trim() && d.summary !== 'Твоя история' ? d.summary.trim() : d.description.trim().slice(0, 200),
       firstContext: hero && !d.firstContext.trim() ? d.description.trim() : d.firstContext,
-      roles: [...new Set(d.roles.map(value => value.trim()).filter(Boolean))],
       stars: chosen.stars.map(star => ({ ...star, avatarSeed: star.avatarSeed.trim() || star.id })),
-    } : draft.customEditing && !d.voice.trim() ? { ...d, voice: 'default' } : d
+    } : draft.customEditing ? { ...d, role, voice: d.voice.trim() ? d.voice : 'default' } : d
     try {
       if (!api.hasPlayer()) { if (!draft.birthYear) { nav.push('01-2_age', { returnToCreation: true }); return } const identity = await api.onboarding({ birthYear: draft.birthYear, address: draft.address, referralCode: pendingReferral() }); registerGameOnboarding(identity.id); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
       if (!createdWorldId && api.onboardingProfile()?.address !== draft.address) await api.settings({ address: draft.address })
@@ -185,9 +184,8 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     const choice = draft.ownCharacter
     const ownSelected = !!choice && !choice.heroId
     const hero = d.stars.length > 1 ? d.stars.find(star => star.id === choice?.heroId) : undefined
-    const ownRole = roles.length === 1 ? roles[0] : roles.find(option => option === choice?.role)
-    const role = draft.createdWorldId ? d.role : (hero?.role.trim() ?? ownRole) || ''
-    const incomplete = ownSelected && (!d.name.trim() || !d.avatar.trim() || roles.length === 0)
+    const role = draft.createdWorldId ? d.role : hero?.role.trim() ?? ownRole
+    const incomplete = ownSelected && (!d.name.trim() || !d.avatar.trim() || !ownRole)
     const canCreate = !!role && (!!hero || ownSelected && !incomplete)
     const choose = (heroId?: string) => setWorldDraft({ ...draft, ownCharacter: { ...choice, heroId } })
     const edit = () => { setEditRole(true); setConfirmRole(false); setError('') }
@@ -209,12 +207,6 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
             selected={ownSelected} disabled={saving || uncertain} onClick={() => choose()} />
         </div>}
         {ownSelected && incomplete && !draft.createdWorldId && <p className="small muted">Для своего персонажа заполни имя, ник и роль в редакторе.</p>}
-        {ownSelected && roles.length > 1 && !draft.createdWorldId && <fieldset className="own-role-options" disabled={saving || uncertain}>
-          <legend>Выбери роль</legend>
-          {roles.map(option => <label className="persona-option" key={option}>
-            <input type="radio" name="world-role" checked={role === option} onChange={() => setWorldDraft({ ...draft, ownCharacter: { role: option } })} /><span>{option}</span>
-          </label>)}
-        </fieldset>}
         {error && <p className="down" role="alert">{error}</p>}
         <Button disabled={saving || uncertain || (!draft.createdWorldId && !canCreate)} onClick={() => void save(role, hero)}>
           {saving ? <span role="status">{draft.createdWorldId ? 'Открываем мир…' : 'Создаём мир…'}</span> : draft.createdWorldId ? 'Открыть мир' : 'Создать мир'}
