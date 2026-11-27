@@ -5,7 +5,7 @@ import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { isOwnWorldSetup, setWorldDraft, updateWorldDraft, type WorldDraft } from '../app/worldDraft'
 import type { Address, WorldDefinition } from '../api/types'
-import { Avatar, Button, Segmented, TopBar } from '../ui'
+import { Avatar, Button, Segmented, TopBar, plural } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { DifficultyPicker, DramaPicker } from './worldQuick'
 
@@ -91,13 +91,15 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
       { section: 'rules', id: `rule-${index}`, value: rule.text, message: 'Заполни правило мира или убери его.' },
     ]),
   ]
-  const missing = requiredFields.find(field => !field.value.trim())
-  const issue = requiredFields.find(field => field.id === invalid && !field.value.trim())
-  const submit = () => {
-    if (!missing) { onSave(); return }
+  const missingFields = requiredFields.filter(field => !field.value.trim())
+  const missing = missingFields[0]
+  const missingSections = new Set(missingFields.map(field => field.section)).size
+  const issue = missingFields.find(field => field.id === invalid)
+  const fieldsLeft = (count: number) => `Ещё ${count} ${plural(count, 'поле', 'поля', 'полей')}`
+  const focusMissing = (field: (typeof requiredFields)[number]) => {
     // Open the section and focus during the click so iOS can keep the keyboard available.
-    flushSync(() => { setOpen(missing.section); setInvalid(missing.id) })
-    const control = document.getElementById(missing.id)
+    flushSync(() => { setOpen(field.section); setInvalid(field.id) })
+    const control = document.getElementById(field.id)
     if (!control) return
     for (let parent = control.parentElement; parent; parent = parent.parentElement) if (parent instanceof HTMLDetailsElement) parent.open = true
     focused.current = control
@@ -108,11 +110,20 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
   const text = (key: keyof WorldDefinition, label: string, props: Partial<Field> = {}) =>
     field({ id: key, label, value: String(d[key]), onChange: value => update({ [key]: value }), ...props })
 
-  const section = (id: string, title: string, subtitle: string, children: ReactNode) => <section className="editor-section">
-    <button className="editor-section-head" aria-expanded={open === id} aria-controls={`editor-${id}`} onClick={() => setOpen(open === id ? '' : id)}>
-      <span><b>{title}</b><span className="small muted">{subtitle}</span>{issue?.section === id && open !== id && <span className="small down">{issue.message}</span>}</span><span aria-hidden>{open === id ? '−' : '＋'}</span>
-    </button>{open === id && <div className="editor-section-body" id={`editor-${id}`}>{children}</div>}
-  </section>
+  const section = (id: string, title: string, subtitle: string, children: ReactNode) => {
+    const count = missingFields.filter(field => field.section === id).length
+    const required = requiredFields.some(field => field.section === id)
+    const status = count ? (id === 'heroes' && !d.stars.length ? 'Добавь героя' : fieldsLeft(count)) : required ? 'Готово' : 'По желанию'
+    return <section className="editor-section">
+      <button className="editor-section-head" aria-expanded={open === id} aria-controls={`editor-${id}`} onClick={() => setOpen(open === id ? '' : id)}>
+        <span><b>{title}</b><span className="small muted">{subtitle}</span>
+          {custom ? <span className={`small ${count ? 'editor-incomplete' : required ? 'up' : 'muted'}`}>{status}</span>
+            : issue?.section === id && open !== id && <span className="small down">{issue.message}</span>}
+        </span><span aria-hidden>{open === id ? '−' : '＋'}</span>
+      </button>
+      {open === id && <div className="editor-section-body" id={`editor-${id}`}>{children}</div>}
+    </section>
+  }
   const changeStar = (id: string, patch: Partial<WorldDefinition['stars'][number]>) => update({ stars: d.stars.map(s => s.id === id ? { ...s, ...patch } : s) })
   const addHero = () => {
     const id = crypto.randomUUID().replaceAll('-', '')
@@ -125,7 +136,12 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
   }
   return <div className="screen no-tab advanced-world"><TopBar title="Настрой свой мир" onBack={saving ? undefined : nav.back} /><div className="pad">
     {!custom && <button className="text-link" onClick={quickSettings}>← Быстрые настройки</button>}
-    {custom && <p className="small muted">Поля со звёздочкой обязательны.</p>}
+    {custom && <div className="world-editor-progress">
+      <div role="status">
+        <b>{missingSections ? `Осталось заполнить ${missingSections} ${plural(missingSections, 'раздел', 'раздела', 'разделов')}` : 'Можно выбрать персонажа'}</b>
+      </div>
+      {missing && <button type="button" className="text-link small" onClick={() => focusMissing(missing)}>Что заполнить</button>}
+    </div>}
     <div className="card world-editor-preview" aria-label="Карточка мира">
       <span aria-hidden="true">{d.emoji.trim() || '✨'}</span>
       <div><b>{d.title.trim() || 'Твой мир'}</b><p className="small muted">{(d.summary !== 'Твоя история' && d.summary.trim()) || d.description.trim() || 'Здесь появится описание мира.'}</p></div>
@@ -154,20 +170,23 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
       </details>
       <StringList title="Варианты роли" help="Добавь роли, из которых можно будет выбрать перед входом." values={d.roles} maxLength={80} onChange={roles => update({ roles })} />
     </>)}
-    {section('heroes', 'Герои вокруг тебя *', 'Пишут в ленте и отвечают на посты', <>
+    {section('heroes', custom ? 'Герои вокруг тебя' : 'Герои вокруг тебя *', 'Пишут в ленте и отвечают на посты', <>
       <p className="small muted">Добавь хотя бы одного героя. Твой персонаж сюда не входит.</p>
-      {d.stars.map(star => <details className="editor-extra hero-editor" key={star.id}>
-        <summary><Avatar seed={star.avatarSeed || star.id} avatarStyle={d.avatarStyle} mode="default" size={34} /><span>{star.name || 'Новый герой'}<span className="small muted">{star.role || 'Добавь занятие героя'}</span></span></summary>
-        {field({ id: starField(star.id, 'name'), label: 'Имя героя', value: star.name, onChange: name => changeStar(star.id, { name }), maxLength: 80, required: true })}
-        {field({ id: starField(star.id, 'role'), label: 'Чем занимается герой', value: star.role, onChange: role => changeStar(star.id, { role }), maxLength: 80, required: true })}
-        {field({ id: starField(star.id, 'about'), label: 'Характер и история', value: star.about, onChange: about => changeStar(star.id, { about }), rows: 3, required: true, placeholder: 'Что для героя важно? Что он скрывает?' })}
-        {field({ id: starField(star.id, 'voice'), label: 'Как герой общается', value: star.voice, onChange: voice => changeStar(star.id, { voice }), rows: 2, required: true, placeholder: 'Например, сдержанно, с сухим юмором' })}
-        <details className="editor-extra"><summary>Ник и главная черта</summary>
-          {field({ id: starField(star.id, 'nickname'), label: 'Ник героя', value: heroHandle(star.avatarSeed) ? star.avatarSeed : '', onChange: avatarSeed => changeStar(star.id, { avatarSeed }), maxLength: 80 })}
-          <label className="label">Главная черта<select value={star.trait} onChange={e => changeStar(star.id, { trait: Number(e.target.value) })}>{['Смелость', 'Поддержка', 'Загадка', 'Воображение', 'Любопытство', 'Энергия', 'Ирония и расчёт', 'Сухой юмор', 'Самоирония', 'Азарт', 'Внимание'].map((label, i) => <option key={label} value={i}>{label}</option>)}</select></label>
+      {d.stars.map(star => {
+        const count = missingFields.filter(field => field.id.startsWith(starField(star.id, ''))).length
+        return <details className="editor-extra hero-editor" key={star.id}>
+          <summary><Avatar seed={star.avatarSeed || star.id} avatarStyle={d.avatarStyle} mode="default" size={34} /><span>{star.name || 'Новый герой'}<span className="small muted">{star.role || 'Добавь занятие героя'}</span>{custom && <span className={`small ${count ? 'editor-incomplete' : 'up'}`}>{count ? fieldsLeft(count) : 'Готово'}</span>}</span></summary>
+          {field({ id: starField(star.id, 'name'), label: 'Имя героя', value: star.name, onChange: name => changeStar(star.id, { name }), maxLength: 80, required: true })}
+          {field({ id: starField(star.id, 'role'), label: 'Чем занимается герой', value: star.role, onChange: role => changeStar(star.id, { role }), maxLength: 80, required: true })}
+          {field({ id: starField(star.id, 'about'), label: 'Характер и история', value: star.about, onChange: about => changeStar(star.id, { about }), rows: 3, required: true, placeholder: 'Что для героя важно? Что он скрывает?' })}
+          {field({ id: starField(star.id, 'voice'), label: 'Как герой общается', value: star.voice, onChange: voice => changeStar(star.id, { voice }), rows: 2, required: true, placeholder: 'Например, сдержанно, с сухим юмором' })}
+          <details className="editor-extra"><summary>Ник и главная черта</summary>
+            {field({ id: starField(star.id, 'nickname'), label: 'Ник героя', value: heroHandle(star.avatarSeed) ? star.avatarSeed : '', onChange: avatarSeed => changeStar(star.id, { avatarSeed }), maxLength: 80 })}
+            <label className="label">Главная черта<select value={star.trait} onChange={e => changeStar(star.id, { trait: Number(e.target.value) })}>{['Смелость', 'Поддержка', 'Загадка', 'Воображение', 'Любопытство', 'Энергия', 'Ирония и расчёт', 'Сухой юмор', 'Самоирония', 'Азарт', 'Внимание'].map((label, i) => <option key={label} value={i}>{label}</option>)}</select></label>
+          </details>
+          <button className="text-link down" onClick={() => update({ stars: d.stars.filter(s => s.id !== star.id) })}>Убрать героя</button>
         </details>
-        <button className="text-link down" onClick={() => update({ stars: d.stars.filter(s => s.id !== star.id) })}>Убрать героя</button>
-      </details>)}
+      })}
       <div className="world-field">
         <button id="add-hero" className="btn secondary" aria-describedby={issue?.id === 'add-hero' ? 'add-hero-help' : undefined} onClick={addHero}>＋ Добавить героя</button>
         {issue?.id === 'add-hero' && <p id="add-hero-help" className="small down" role="alert">{issue.message}</p>}
@@ -203,6 +222,6 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
     {!ownWorld && <AgeRuleNote teen={draft.group !== '18+' || draft.ageBand === '14-17'} />}
     {error && <p className="down" role="alert">{error}</p>}
     {uncertain && <Button secondary onClick={onCheck}>Проверить список миров</Button>}
-    <Button disabled={saving || uncertain} onClick={submit}>{saving ? 'Сохраняем…' : custom ? 'Выбрать персонажа' : draft.previewOnly ? 'Посмотреть демо' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'}</Button>
+    <Button disabled={saving || uncertain} onClick={() => missing ? focusMissing(missing) : onSave()}>{saving ? 'Сохраняем…' : custom ? 'Выбрать персонажа' : draft.previewOnly ? 'Посмотреть демо' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'}</Button>
   </div></div>
 }
