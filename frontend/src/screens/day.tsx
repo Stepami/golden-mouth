@@ -11,7 +11,7 @@ import { DailyTasks } from '../ui/DailyTasks'
 import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
-import { contentOf, worldOf } from '../api/worldContent'
+import { contentOf, optionalWorldTemplate, worldOf } from '../api/worldContent'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import { dm as dmMock, friends as friendsMock } from '../api/mock'
@@ -235,7 +235,9 @@ function Stage() {
   useEffect(() => { if (hasRegularPost) nextStoryPostSaved(p.worldInstanceId ?? p.world) }, [hasRegularPost, p.worldInstanceId, p.world])
   const gestures = usePostListGestures(cacheKey, list, () => Promise.all([list.refresh(), refresh()]))
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
-  if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home firstPostConfirmed={nav.params.firstPostConfirmed === true || list.pending === null && !list.hasNext} /></div>
+  const firstPostConfirmed = nav.params.firstPostConfirmed === true
+  const openingOwnWorld = firstPostConfirmed && !list.ready && !optionalWorldTemplate(worldOf(p.world))
+  if (!list.error && (openingOwnWorld || list.ready && list.items.length === 0)) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home firstPostConfirmed={firstPostConfirmed || list.pending === null && !list.hasNext} /></div>
   return (
     <div className="screen channel-screen post-list-screen" ref={gestures.screenRef}>
       {pullIndicator}

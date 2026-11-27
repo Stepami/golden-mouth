@@ -5,7 +5,7 @@ import { usePlayer, useStore } from '../app/store'
 import { useNav } from '../app/nav'
 import { selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 import { Button, Sheet, TopBar } from '../ui'
-import { AdvancedSetup, DescriptionSetup } from './worldWizard'
+import { AdvancedSetup, DescriptionSetup, WorldCreated } from './worldWizard'
 import { register } from '.'
 import { AgeRuleNote } from './worldAdvanced'
 import { worldArt } from '../app/worldPrototype'
@@ -50,4 +50,4 @@ function WorldDetailsScreen() {
     <Button secondary disabled={loading} onClick={() => setConfirmDelete(false)}>Отмена</Button>
   </Sheet>}</div>
 }
-register({ '05-12_world_advanced': { component: AdvancedSetup, title: 'Редактирование мира' }, '05-7b_own_world': { component: DescriptionSetup, title: 'Описание и правила мира' }, '05-11_world_rules': { component: WorldDetailsScreen, title: 'Настройки мира' } })
+register({ '05-12_world_advanced': { component: AdvancedSetup, title: 'Редактирование мира' }, '05-7b_own_world': { component: DescriptionSetup, title: 'Описание и правила мира' }, '05-7d_world_created': { component: WorldCreated, title: 'Мир создан' }, '05-11_world_rules': { component: WorldDetailsScreen, title: 'Настройки мира' } })
