@@ -4,6 +4,8 @@ import type { AgeBand } from './ageBand'
 import { avatarPersonalization } from './avatarPersonalization'
 export interface WorldDraft {
   definition: WorldDefinition; heroOrder?: string[]; personaChosen?: boolean; advanced?: boolean; previewOnly?: boolean; persona?: { star: WorldDefinition['stars'][number]; description: string; name: string; avatar: string; role: string }; editingId?: string; createdWorldId?: string; reason?: string; address: Address; group: '14-17' | '18+'; ageBand?: AgeBand; birthYear?: number; personalizeAvatar?: boolean
+  customEditing?: boolean
+  ownCharacter?: { heroId?: string; role?: string }
 }
 
 export function isOwnWorldSetup(draft: WorldDraft) {

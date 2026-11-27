@@ -246,6 +246,8 @@ summary { cursor: pointer; padding: 6px 0; font-weight: 700; }
 .screen.no-tab:is(.advanced-world, .own-world-role, .own-world-arrival) { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
 .own-world-role > .pad, .own-world-arrival > .pad { display: grid; gap: 14px; overflow-wrap: anywhere; }
 .own-world-role .editor-preview p { margin-top: 4px; }
+.own-persona-options .persona-option:last-child { margin-bottom: 0; }
+.own-persona-options .persona-option:disabled { color: var(--muted); cursor: default; }
 .own-role-options { border: 0; min-width: 0; }
 .own-role-options legend { margin-bottom: 8px; font-weight: 700; }
 .own-role-options .persona-option { margin-bottom: 8px; }
@@ -414,7 +416,9 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .world-resume > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .world-resume b { font-size: 16px; }
 .world-resume p { margin-top: 3px; }
-.world-resume-action { flex: none; font-size: 13px; color: var(--lilac); }
+.world-resume-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; }
+.world-resume-label { font-size: 12px; color: var(--lilac); }
+.world-resume-action { display: block; margin-top: 5px; font-size: 13px; color: var(--lilac); }
 .world-resume:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; }
 .world-resume:disabled { cursor: wait; }
 .worlds-home .own-world-unlock { margin-top:20px; }

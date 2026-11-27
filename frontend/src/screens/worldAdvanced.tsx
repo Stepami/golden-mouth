@@ -52,6 +52,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
 }) {
   const nav = useNav(); const { player } = useStore(); const d = draft.definition
   const custom = isOwnWorldSetup(draft)
+  const ownWorld = custom || draft.customEditing
   const [open, setOpen] = useState(editRole ? 'person' : custom ? 'world' : '')
   const [invalid, setInvalid] = useState('')
   const focused = useRef<HTMLElement | null>(null)
@@ -68,13 +69,16 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
     nav.replace(d.templateId === null || draft.editingId ? '05-7b_own_world' : '01-4_channel')
   }
   const update = updateWorldDraft
-  const roleRequired = !custom || !d.roles.some(role => role.trim())
+  const personRequired = !custom || d.stars.length < 2
+  const roleRequired = personRequired && (!custom || !d.roles.some(role => role.trim()))
   const requiredFields = [
     { section: 'world', id: 'title', value: d.title, message: 'Введи название мира.' },
     { section: 'world', id: 'description', value: d.description, message: 'Опиши, о чём этот мир.' },
-    { section: 'person', id: 'name', value: d.name, message: 'Введи имя персонажа.' },
-    { section: 'person', id: 'role', value: roleRequired ? d.role : 'роль задана', message: 'Укажи, кем будешь играть.' },
-    { section: 'person', id: 'avatar', value: d.avatar, message: 'Задай ник персонажа.' },
+    ...(personRequired ? [
+      { section: 'person', id: 'name', value: d.name, message: 'Введи имя персонажа.' },
+      ...(roleRequired ? [{ section: 'person', id: 'role', value: d.role, message: 'Укажи, кем будешь играть.' }] : []),
+      { section: 'person', id: 'avatar', value: d.avatar, message: 'Задай ник персонажа.' },
+    ] : []),
     { section: 'heroes', id: 'add-hero', value: d.stars.length ? 'герой добавлен' : '', message: 'Добавь хотя бы одного героя.' },
     ...d.stars.flatMap(star => [
       { section: 'heroes', id: starField(star.id, 'name'), value: star.name, message: 'Введи имя героя.' },
@@ -82,7 +86,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
       { section: 'heroes', id: starField(star.id, 'about'), value: star.about, message: 'Добавь пару слов о характере или прошлом героя.' },
       { section: 'heroes', id: starField(star.id, 'voice'), value: star.voice, message: 'Опиши, как общается герой.' },
     ]),
-    { section: 'mood', id: 'voice', value: d.voice, message: 'Опиши стиль подсказок для постов.' },
+    ...(ownWorld ? [] : [{ section: 'mood', id: 'voice', value: d.voice, message: 'Опиши стиль подсказок для постов.' }]),
     ...d.rules.flatMap((rule, index) => rule.locked ? [] : [
       { section: 'rules', id: `rule-${index}`, value: rule.text, message: 'Заполни правило мира или убери его.' },
     ]),
@@ -138,13 +142,13 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
     </>)}
     {section('person', 'Твой персонаж', d.name ? [d.name, d.role].filter(Boolean).join(' · ') : 'Имя, роль и портрет', <>
       {custom && player && <Button secondary onClick={() => update({ name: player.name, avatar: player.handle, role: player.role })}>Взять персонажа из текущего мира</Button>}
-      {text('name', 'Имя персонажа', { maxLength: 80, required: true })}
+      {text('name', 'Имя персонажа', { maxLength: 80, required: personRequired })}
       {text('role', 'Кто ты в этой истории', { maxLength: 80, required: roleRequired, placeholder: 'Например, репортёр' })}
-      {text('avatar', 'Ник персонажа', { maxLength: 80, required: true })}
+      {text('avatar', 'Ник персонажа', { maxLength: 80, required: personRequired })}
       <div className="editor-preview"><Avatar seed={d.avatar || 'new-player'} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={48} /><div><b>{d.name || 'Твой персонаж'}</b><p className="small muted">{d.role}</p></div></div>
       <details className="editor-extra"><summary>Портрет и обращение</summary>
         <AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} />
-        <Segmented value={d.avatarStyle} onChange={avatarStyle => update({ avatarStyle })} options={['lorelei', 'notionists', 'pixelArt', 'thumbs', 'shapes', 'adventurer'].map((id, i) => ({ id, label: ['портрет', 'скетч', 'пиксели', 'мини', 'формы', 'приключения'][i] }))} />
+        <Segmented wrap value={d.avatarStyle} onChange={avatarStyle => update({ avatarStyle })} options={['lorelei', 'notionists', 'pixelArt', 'thumbs', 'shapes', 'adventurer'].map((id, i) => ({ id, label: ['портрет', 'скетч', 'пиксели', 'мини', 'формы', 'приключения'][i] }))} />
         <p className="label">Как к тебе обращаться</p>
         <Segmented value={draft.address} onChange={(address: Address) => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} />
       </details>
@@ -169,11 +173,11 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
         {issue?.id === 'add-hero' && <p id="add-hero-help" className="small down" role="alert">{issue.message}</p>}
       </div>
     </>)}
-    {section('mood', 'Настроение истории', 'Сложность, драма и стиль подсказок', <>
-      {text('voice', 'Стиль подсказок для постов', { rows: 2, maxLength: 200, required: true, placeholder: 'Например, с любопытством и добрым юмором' })}
+    {section('mood', 'Настроение истории', ownWorld ? 'Сложность и драма' : 'Сложность, драма и стиль подсказок', <>
+      {!ownWorld && text('voice', 'Стиль подсказок для постов', { rows: 2, maxLength: 200, required: true, placeholder: 'Например, с любопытством и добрым юмором' })}
       <DifficultyPicker definition={d} />
       <DramaPicker definition={d} withDifficulty={false} />
-      <StringList title="Варианты стиля" help="Готовые варианты для быстрого выбора стиля подсказок." values={d.voices} onChange={voices => update({ voices })} />
+      {!ownWorld && <StringList title="Варианты стиля" help="Готовые варианты для быстрого выбора стиля подсказок." values={d.voices} onChange={voices => update({ voices })} />}
     </>)}
     {section('rules', 'Особенности мира', 'Что здесь возможно и как всё устроено', <>
       <p className="small muted">Например: «Магия работает только ночью». Эти правила влияют на поведение героев.</p>
@@ -196,9 +200,9 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
         <button className="chip" onClick={() => update({ achievements: [...d.achievements, { id: crypto.randomUUID(), emoji: '⭐', title: '', open: false }] })}>＋ Добавить достижение</button>
       </details>
     </>)}
-    <AgeRuleNote teen={draft.group !== '18+' || draft.ageBand === '14-17'} />
+    {!ownWorld && <AgeRuleNote teen={draft.group !== '18+' || draft.ageBand === '14-17'} />}
     {error && <p className="down" role="alert">{error}</p>}
     {uncertain && <Button secondary onClick={onCheck}>Проверить список миров</Button>}
-    <Button disabled={saving || uncertain} onClick={submit}>{saving ? 'Сохраняем…' : custom ? 'Перейти к выбору роли' : draft.previewOnly ? 'Посмотреть демо' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'}</Button>
+    <Button disabled={saving || uncertain} onClick={submit}>{saving ? 'Сохраняем…' : custom ? 'Выбрать персонажа' : draft.previewOnly ? 'Посмотреть демо' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'}</Button>
   </div></div>
 }
