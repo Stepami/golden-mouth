@@ -3,7 +3,21 @@ import type { Address, Player, WorldDefinition } from '../api/types'
 import type { AgeBand } from './ageBand'
 import { avatarPersonalization } from './avatarPersonalization'
 export interface WorldDraft {
-  definition: WorldDefinition; heroOrder?: string[]; personaChosen?: boolean; advanced?: boolean; previewOnly?: boolean; persona?: { star: WorldDefinition['stars'][number]; description: string; name: string; avatar: string; role: string }; editingId?: string; reason?: string; address: Address; group: '14-17' | '18+'; ageBand?: AgeBand; birthYear?: number; personalizeAvatar?: boolean
+  definition: WorldDefinition; heroOrder?: string[]; personaChosen?: boolean; advanced?: boolean; previewOnly?: boolean; persona?: { star: WorldDefinition['stars'][number]; description: string; name: string; avatar: string; role: string }; editingId?: string; createdWorldId?: string; reason?: string; address: Address; group: '14-17' | '18+'; ageBand?: AgeBand; birthYear?: number; personalizeAvatar?: boolean
+  customEditing?: boolean
+  ownCharacter?: { heroId?: string; role?: string }
+  ownRoleEdited?: boolean
+}
+
+export function isOwnWorldSetup(draft: WorldDraft) {
+  return draft.definition.templateId === null && !draft.editingId && !draft.previewOnly
+}
+
+export function ownWorldRole(draft: WorldDraft) {
+  const { role, roles } = draft.definition
+  if (draft.ownRoleEdited) return role.trim()
+  const savedRole = !draft.ownCharacter?.heroId ? draft.ownCharacter?.role?.trim() : undefined
+  return savedRole || role.trim() || roles.find(value => value.trim())?.trim() || ''
 }
 
 export function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
@@ -60,5 +74,5 @@ export function beginOwnWorld(player: Player) {
   selectDraftOwner(player.id)
   const restored = savedWorldDraft('custom')
   if (restored && !restored.previewOnly) { setWorldDraft(restored); return }
-  setWorldDraft({ definition: { ...blankWorld(), name: player.name, avatar: player.handle, role: player.role }, advanced: true, previewOnly: false, address: player.address, group: player.ageBand === '14-17' || !player.ageBand ? '14-17' : '18+', ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) })
+  setWorldDraft({ definition: blankWorld(), advanced: true, previewOnly: false, address: player.address, group: player.ageBand === '14-17' || !player.ageBand ? '14-17' : '18+', ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) })
 }

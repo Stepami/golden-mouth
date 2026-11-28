@@ -13,6 +13,7 @@ import { DailyTasks } from '../ui/DailyTasks'
 import { DailyTaskResult, dailyTaskBaseline, type DailyTaskBaseline } from '../ui/DailyTaskResult'
 import { Resources } from '../ui/Resources'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
 import { firstPost, results } from '../api/mock'
@@ -23,13 +24,14 @@ import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, Sheet, TopBar, EnergyBadge, Whisper, fmt, plural } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
-import { contentOf, worldOf } from '../api/worldContent'
+import { contentOf, optionalWorldTemplate, worldOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 import { submitOnDesktopEnter, TextField } from '../ui/TextField'
 import { completePostDraft, draftKey, hasPostDraft, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
+import { heroHandle } from '../app/handle'
 
 
 // 02-1: пост, «Подскажи» дописывает черновик
@@ -40,7 +42,7 @@ export function Compose() {
   const ideas = guest ? [guest.postIdea] : contentOf(p.world).ideas
   const ownHandle = p.handle.trim().replace(/^@+/, '').toLowerCase()
   const mentions = world.stars.flatMap(star => {
-    const handle = star.avatarSeed?.trim().replace(/^@+/, '')
+    const handle = heroHandle(star.avatarSeed).slice(1)
     return handle && /^[\p{L}\p{N}_-]+(?:\.[\p{L}\p{N}_-]+)*$/u.test(handle) && handle.toLowerCase() !== ownHandle
       ? [{ id: star.id, name: star.name, avatarSeed: star.avatarSeed, handle }] : []
   })
@@ -290,6 +292,15 @@ function ResultDelta({ delta }: { delta: number }) {
   </div>
 }
 
+function continuationHint(text: string | undefined, world: ReturnType<typeof worldOf> | undefined) {
+  if (!world || !text?.trim() || text.trim().length > 90 || /[?？]/.test(text)) return ''
+  const prompt = world.firstPrompt.trim()
+  const premise = (prompt || world.firstContext.trim() || world.description.trim()).replace(/\s+/g, ' ')
+  if (!premise) return ''
+  const excerpt = premise.length > 140 ? premise.slice(0, 140).replace(/\s+\S*$/, '') + '…' : premise
+  return prompt ? excerpt : `Спроси, что герой знает об этом. «${excerpt}»`
+}
+
 function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
   const guest = useGuestSession(); const store = useStore()
   const nav = useNav(); const player = guest?.player ?? store.player!
@@ -324,12 +335,27 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
     return () => document.removeEventListener('keydown', keyboard)
   }, [nav])
   const viral = theme === 'viral'
+  const world = guest ? undefined : worldOf(player.world)
+  const customWorld = world && !optionalWorldTemplate(world) ? world : undefined
   const stars = guest?.world.stars ?? contentOf(player.world).stars
-  const comment = post.comments.find(item => item.star && !item.hidden)
+  const comment = post.comments.find(item => item.star && !item.hidden && (!customWorld || stars.some(star => `Star_${star.id}` === item.authorId)))
   const fallback = r.bestComment
-  const actor = stars.find(item => `Star_${item.id}` === comment?.authorId || item.avatarSeed === (comment?.avatar ?? fallback?.avatar) || `Star_${item.id}` === nav.params.predictedAuthorId)
+  const actor = stars.find(item => `Star_${item.id}` === comment?.authorId)
+    ?? stars.find(item => item.avatarSeed === (comment?.avatar ?? fallback?.avatar))
+    ?? stars.find(item => `Star_${item.id}` === nav.params.predictedAuthorId)
   const commentText = comment?.text ?? fallback?.text
-  const speaker = comment?.author ?? actor?.name
+  const speaker = actor?.name ?? comment?.author
+  const handle = heroHandle(comment?.handle ?? actor?.avatarSeed ?? '')
+  const continuation = continuationHint(commentText, customWorld)
+  const waitingForReply = !!customWorld && !comment && !commentFailed && !!commentPromise
+  const openConversation = () => {
+    if (!guest) tap('post_open_conversation', { ok: !!comment })
+    const params = { post, commentPromise, focusReply: true, replyCommentId: customWorld ? comment?.id : undefined }
+    if (!params.replyCommentId) { nav.replace('02-6_thread', params); return }
+    flushSync(() => nav.replace('02-6_thread', params))
+    document.getElementById('thread-reply-input')?.focus({ preventScroll: true })
+    document.getElementById(`reply-comment-${params.replyCommentId}`)?.scrollIntoView({ block: 'center' })
+  }
   const savedPost = nav.params.post as Post | undefined
   const realPost = !guest && savedPost?.id === r.postId ? savedPost : undefined
   const viewedPostId = realPost?.id
@@ -384,8 +410,9 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
             </dl>
             {!guest && dailyBaseline && <DailyTaskResult baseline={dailyBaseline} postId={post.id} />}
             <section className="post-result-reaction" aria-label="Ответ персонажа">
-              <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong><div className="small muted">{guest?.world.title ?? worldOf(player.world).title} · AI-персонаж</div></div></div>
+              <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong>{handle && <span className="small muted result-hero-handle">{handle}</span>}<div className="small muted">{guest?.world.title ?? world?.title} · AI-персонаж</div></div></div>
               {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
+              {continuation && <p className="small muted world-reply-hint"><b>Как продолжить</b> {continuation}</p>}
             </section>
             {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
             <details className="result-details"><summary>Разбор поста</summary>
@@ -397,8 +424,8 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           </div>
           <div className="post-result-actions">
             {guest?.hint}
-            <span data-game-onboarding-post={comment ? post.id : undefined}><Button onClick={() => { if (!guest) tap('post_open_conversation', { ok: !!comment }); nav.replace('02-6_thread', { post, commentPromise, focusReply: true }) }}>
-              {commentText ? (speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
+            <span data-game-onboarding-post={comment ? post.id : undefined}><Button onClick={openConversation} disabled={waitingForReply}>
+              {waitingForReply ? 'Ждём ответ героя…' : commentText ? (speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
             </Button></span>
             {!guest && !gameOnboardingActive(onboarding) && <Button secondary onClick={() => { tap('result_open_next_post'); nav.replace('02-1_compose') }}>Новый пост</Button>}
           </div>
@@ -421,19 +448,26 @@ export function Thread() {
   const player = guest?.player ?? store.player!
   const publishedPost = guest?.post ?? (nav.params.post as Post | undefined)
   const postId = typeof nav.params.postId === 'string' ? nav.params.postId : publishedPost?.id
+  const explicitReplyId = typeof nav.params.replyCommentId === 'string' ? nav.params.replyCommentId : undefined
+  const directReply = explicitReplyId && publishedPost?.comments.some(comment => comment.id === explicitReplyId && comment.star && !comment.hidden) ? explicitReplyId : null
   const stars = guest?.world.stars ?? contentOf(player.world).stars
+  const world = guest ? undefined : worldOf(player.world)
+  const customWorld = world && !optionalWorldTemplate(world) ? world : undefined
   const starIds = stars.map(star => star.id).join('\0')
   const threadKey = `${player.id}:${player.worldInstanceId ?? player.world}:${postId ?? 'mock'}`
   const storageKey = `reki:reply-draft:${threadKey}`
   type Draft = { requestId: string; commentId: string | null; text: string; submitted: boolean; additionalStarId?: string }
-  const fresh = (): Draft => ({ requestId: crypto.randomUUID(), commentId: null, text: '', submitted: false })
+  const fresh = (commentId: string | null = null): Draft => ({ requestId: crypto.randomUUID(), commentId, text: '', submitted: false })
   const readDraft = (): Draft => {
     if (guest) return { requestId: 'guest-reply', commentId: publishedPost?.comments[0]?.id ?? null, text: guest.reply, submitted: guest.replySubmitted }
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as Draft | null
-      if (saved && typeof saved.requestId === 'string' && saved.requestId.length > 0 && saved.requestId.length <= 64 && typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) return { ...saved, submitted: saved.submitted === true, additionalStarId: typeof saved.additionalStarId === 'string' ? saved.additionalStarId : undefined }
+      if (saved && typeof saved.requestId === 'string' && saved.requestId.length > 0 && saved.requestId.length <= 64 && typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) {
+        if (directReply && directReply !== saved.commentId) return { ...fresh(directReply), text: saved.text }
+        return { ...saved, submitted: saved.submitted === true, additionalStarId: typeof saved.additionalStarId === 'string' ? saved.additionalStarId : undefined }
+      }
     } catch { /* Хранилище может быть недоступно. */ }
-    return fresh()
+    return fresh(directReply)
   }
   const [draft, setDraft] = useState<Draft>(readDraft)
   const [post, setPost] = useState<Post | null>(() => publishedPost ?? (postId ? null : firstPost))
@@ -447,6 +481,27 @@ export function Thread() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const replyInput = useRef<HTMLTextAreaElement>(null)
+  const threadRoot = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const viewport = window.visualViewport
+    const root = threadRoot.current
+    if (!directReply || !root || !viewport) return
+    const positionReply = () => root.style.setProperty('--reply-keyboard-inset', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`)
+    const revealTarget = () => {
+      positionReply()
+      if (document.activeElement !== replyInput.current) return
+      const target = document.getElementById(`reply-comment-${directReply}`)?.getBoundingClientRect()
+      if (!target) return
+      const visibleTop = viewport.offsetTop + 58
+      if (target.top < visibleTop || target.bottom > viewport.offsetTop + viewport.height - 100) {
+        window.scrollBy(0, target.top - visibleTop - 8)
+      }
+    }
+    positionReply()
+    viewport.addEventListener('resize', revealTarget)
+    viewport.addEventListener('scroll', positionReply)
+    return () => { viewport.removeEventListener('resize', revealTarget); viewport.removeEventListener('scroll', positionReply) }
+  }, [directReply, load])
   useLayoutEffect(() => {
     const input = replyInput.current
     if (!input) return
@@ -471,7 +526,7 @@ export function Thread() {
   useEffect(() => {
     if (guest || !postId) return
     let alive = true
-    setLoad('loading')
+    if (!directReply || reloadToken) setLoad('loading')
     api.post(postId).then(found => {
       if (!alive) return
       if (!found) { setPost(null); setLoad('unavailable'); return }
@@ -487,12 +542,14 @@ export function Thread() {
       if (saved && found.comments.some(comment => comment.requestId === `${draft.requestId}-star`) &&
         (!draft.additionalStarId || found.comments.some(comment => comment.requestId === `${draft.requestId}-extra`))) setDraft(fresh())
     }).catch((cause: unknown) => {
-      if (alive) setLoad((cause as { status?: number })?.status === 404 ? 'unavailable' : 'error')
+      if (!alive) return
+      if ((cause as { status?: number })?.status === 404) setLoad('unavailable')
+      else if (!directReply || reloadToken) setLoad('error')
     })
     return () => { alive = false }
     // The current draft is compared once when opening/reloading this post.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postId, threadKey, reloadToken, starIds])
+  }, [postId, threadKey, reloadToken, starIds, directReply])
   const commentPromise = nav.params.commentPromise as Promise<Post | null> | undefined
   useEffect(() => {
     if (guest || load !== 'ready' || !commentPromise) return
@@ -504,13 +561,13 @@ export function Thread() {
   }, [commentPromise, load, threadKey])
   const initialReplyFocused = useRef('')
   useEffect(() => {
-    if (guest || !nav.params.focusReply || load !== 'ready' || !post || initialReplyFocused.current === threadKey) return
+    if (guest || directReply || !nav.params.focusReply || load !== 'ready' || !post || initialReplyFocused.current === threadKey) return
     const target = post.comments.find(comment => comment.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId))
     if (!target) return
     initialReplyFocused.current = threadKey
     setDraft(current => current.commentId || current.submitted ? current : { ...current, commentId: target.id, requestId: crypto.randomUUID() })
     requestAnimationFrame(() => replyInput.current?.focus())
-  }, [post, load, threadKey, nav.params.focusReply])
+  }, [post, load, threadKey, nav.params.focusReply, directReply])
   const postAuthor = stars.find(star => `Star_${star.id}` === post?.authorId)
   const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId)
   const target = post?.comments.find(comment => comment.id === draft.commentId)
@@ -617,7 +674,7 @@ export function Thread() {
   shownPost.comments.filter(comment => !comment.parentCommentId).forEach(append)
   shownPost.comments.forEach(append)
   return (
-    <div className="screen no-tab thread-screen">
+    <div ref={threadRoot} className="screen no-tab thread-screen">
       <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions">
         {guest ? <>
           <EnergyBadge value={player.postsLeft} />
@@ -628,13 +685,22 @@ export function Thread() {
       <div className="pad">
         {typeof nav.params.guestImportNotice === 'string' && <div className="card" role="status">{nav.params.guestImportNotice}</div>}
         <div className="card" style={{ marginBottom: 12 }}>{shownPost.text}{!guest && <QuotedPost repostId={shownPost.repostId} />}{!guest && <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={shownPost.id} likes={shownPost.likes} likedBy={shownPost.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!shownPost.repostId && <RepostAction postId={shownPost.id} />}</div>{shownPost.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div>}</div>
-        {showHelp && !onboarding && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
-        {(!showHelp || !!onboarding) && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
-        {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
-          <Comment seed={comment.avatar} avatarStyle={guest?.world.avatarStyle} name={comment.author} handle={comment.star ? comment.handle : comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
-          {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}
-          {!guest?.replySubmitted && isStarComment(comment) && <button data-game-onboarding-post={!targetAvailable ? shownPost.id : undefined} className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
-        </div>)}
+        {showHelp && !onboarding && !directReply && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
+        {(!showHelp || !!onboarding || directReply) && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
+        {ordered.map(comment => {
+          const focused = draft.commentId === comment.id
+          const continuation = focused && isStarComment(comment) && !shownPost.comments.some(child => child.me && child.parentCommentId === comment.id) ? continuationHint(comment.text, customWorld) : ''
+          return <div key={comment.id} id={`reply-comment-${comment.id}`} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
+            <Comment seed={comment.avatar} avatarStyle={guest?.world.avatarStyle} name={comment.author} handle={comment.star ? heroHandle(comment.handle) : comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
+            {continuation && <p className="small muted world-reply-hint thread-world-hint"><b>Как продолжить</b> {continuation}</p>}
+            {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => {
+              const star = stars.find(item => `Star_${item.id}` === reaction.authorId)
+              const name = star?.name ?? (heroHandle(reaction.author) ? reaction.author : '')
+              return <span key={`${reaction.authorId}:${reaction.emoji}`} title={star ? [name, heroHandle(star.avatarSeed)].filter(Boolean).join(' · ') : name} className="react">{reaction.emoji} {name}</span>
+            })}</div>}
+            {!guest?.replySubmitted && isStarComment(comment) && <button data-game-onboarding-post={!targetAvailable ? shownPost.id : undefined} className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: focused ? 'var(--accent)' : 'var(--lilac)' }}>{focused ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
+          </div>
+        })}
         {activeTypingName && <div className="card" role="status" aria-live="polite"><div className="small muted">{activeTypingName} печатает...</div><div className="live-current" aria-hidden="true"><span /></div></div>}
         {targetAvailable && !guest?.replySubmitted && <div className="small muted" style={{ marginBottom: 8 }}>{draft.commentId === null ? 'Комментарий к посту' : 'Отвечаешь'}: {recipient}</div>}
         {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => replyInput.current?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
@@ -651,7 +717,7 @@ export function Thread() {
       </Sheet>}
       {!guest?.replySubmitted && <div className="bottom-cta thread-reply" data-game-onboarding-post={targetAvailable ? shownPost.id : undefined}>
         {guest?.hint}
-        <div className="card thread-reply-field"><textarea ref={replyInput} className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} onKeyDown={event => submitOnDesktopEnter(event, sendDisabled ? undefined : send)} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
+        <div className="card thread-reply-field"><textarea ref={replyInput} id="thread-reply-input" className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} onKeyDown={event => submitOnDesktopEnter(event, sendDisabled ? undefined : send)} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
         <button className="card thread-reply-send" onClick={send} disabled={sendDisabled} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
       </div>}
     </div>

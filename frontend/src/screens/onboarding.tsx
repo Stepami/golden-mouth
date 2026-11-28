@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
 import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
-import { worldOf, contentOf } from '../api/worldContent'
+import { worldOf, contentOf, optionalWorldTemplate } from '../api/worldContent'
 import type { Player } from '../api/types'
 import { needsRegistration } from '../api/auth'
 import { useNav } from '../app/nav'
@@ -143,7 +143,7 @@ function Under18() {
 }
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
-export function ChannelHead({ firstPublishedPostId }: { firstPublishedPostId?: string } = {}) {
+export function ChannelHead({ firstPublishedPostId, hideDaily = false }: { firstPublishedPostId?: string; hideDaily?: boolean } = {}) {
   const guest = useGuestSession(); const profile = useStore()?.player; const nav = useNav()
   const p = guest?.player ?? profile!
   const w = guest?.world ?? worldOf(p.world)
@@ -154,7 +154,7 @@ export function ChannelHead({ firstPublishedPostId }: { firstPublishedPostId?: s
       {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
       {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
     </div>
-    {!guest && nav.current !== '02-2_live' && <DailyTasks inline={nav.current === '03-5_stage'} firstPublishedPostId={firstPublishedPostId} />}
+    {!guest && !hideDaily && nav.current !== '02-2_live' && <DailyTasks inline={nav.current === '03-5_stage'} firstPublishedPostId={firstPublishedPostId} />}
   </>
 }
 
@@ -165,16 +165,19 @@ export function Home({ firstPostConfirmed = false }: { firstPostConfirmed?: bool
 
 function LiveHome({ firstPostConfirmed }: { firstPostConfirmed: boolean }) {
   const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
+  const world = worldOf(p.world)
+  const custom = !optionalWorldTemplate(world)
   const worldId = p.worldInstanceId ?? p.world
   const story = useNextStory()
   const startingNextStory = story?.phase === 'post' && story.worldId === worldId
   const starter = startingNextStory ? profile.ideas.find(idea => idea.trim()) : undefined
-  const prompt = startingNextStory && !starter ? profile.firstPrompt?.trim() : undefined
-  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} starter={starter} prompt={prompt} offer={<NextStoryChannelOffer player={p} />} hint={<NextStoryChannelHint player={p} />} />
+  const prompt = custom || startingNextStory && !starter ? profile.firstPrompt.trim() : undefined
+  const context = custom ? profile.firstContext.trim() || profile.description.trim() : profile.firstContext
+  return <HomeView player={p} title={world.title} context={context} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} custom={custom} starter={starter} prompt={prompt} offer={<NextStoryChannelOffer player={p} />} hint={<NextStoryChannelHint player={p} />} />
 }
 
-function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest = false, starter, prompt, offer, hint }: {
-  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; guest?: boolean; starter?: string; prompt?: string; offer?: React.ReactNode; hint?: React.ReactNode
+function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest = false, custom = false, starter, prompt, offer, hint }: {
+  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; guest?: boolean; custom?: boolean; starter?: string; prompt?: string; offer?: React.ReactNode; hint?: React.ReactNode
 }) {
   const nav = useNav()
   const session = useGuestSession()
@@ -182,6 +185,20 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
   if (session?.published) return <div className="screen channel-screen"><ChannelHead /><div className="pad">
     <Card><p>{session.post.text}</p></Card>
   </div><BottomCTA main="Посмотреть реакции" onMain={() => nav.push('02-6_thread', { focusReply: true })} /></div>
+  const openEditor = () => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }
+  if (custom) return <div className="screen first-story-screen">
+    <ChannelHead hideDaily />
+    <div className="pad">
+      <section className="card first-story own-world-kickoff">
+        <h1>Завязка</h1>
+        {context && <p className="first-story-context">{context}</p>}
+        {prompt && <p className="muted">{prompt}</p>}
+        <Button onClick={openEditor}>Написать первый пост</Button>
+      </section>
+    </div>
+    <DailyTasks inline={nav.current === '03-5_stage'} />
+    <div className="pad"><Streak streak={p.streak} />{offer}</div>
+  </div>
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
     {!suggested && <Streak streak={p.streak} />}
     {offer}
@@ -192,7 +209,7 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
       <div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>
       {!suggested && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
     </div>{!suggested && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
-  </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={() => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
+  </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={openEditor}>Написать первый пост</button></div></div>
 }
 
 register({

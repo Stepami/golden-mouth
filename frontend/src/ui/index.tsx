@@ -131,11 +131,11 @@ export function Toggle({ on, onChange }: { on: boolean; onChange?: (v: boolean) 
   )
 }
 
-export function Segmented<T extends string>({ options, value, onChange }: { options: { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+export function Segmented<T extends string>({ options, value, onChange, wrap = false }: { options: { id: T; label: string }[]; value: T; onChange: (v: T) => void; wrap?: boolean }) {
   return (
-    <div style={{ display: 'flex', gap: 4, background: '#14141B', borderRadius: 11, padding: 3 }}>
+    <div style={{ display: wrap ? 'grid' : 'flex', gridTemplateColumns: wrap ? 'repeat(auto-fit, minmax(min(100%, 96px), 1fr))' : undefined, gap: 4, background: '#14141B', borderRadius: 11, padding: 3 }}>
       {options.map(o => (
-        <button key={o.id} onClick={() => onChange(o.id)} style={{ flex: 1, padding: '7px 0', borderRadius: 9, border: 'none', fontSize: 13, background: o.id === value ? 'var(--grad)' : 'none', color: o.id === value ? '#fff' : 'var(--muted2)' }}>{o.label}</button>
+        <button key={o.id} aria-pressed={o.id === value} onClick={() => onChange(o.id)} style={{ flex: 1, padding: wrap ? '9px 4px' : '7px 0', overflowWrap: wrap ? 'anywhere' : undefined, borderRadius: 9, border: 'none', fontSize: 13, background: o.id === value ? 'var(--grad)' : 'none', color: o.id === value ? '#fff' : 'var(--muted2)' }}>{o.label}</button>
       ))}
     </div>
   )

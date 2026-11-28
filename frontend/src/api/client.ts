@@ -178,7 +178,7 @@ async function loadPlayer(worldId?: string): Promise<Player | undefined> {
         selected = localStorage.getItem(`reki:selected-world:v2:${player.id}`) ?? undefined;
     }
     catch { /* memory fallback */ }
-    const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0];
+    const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? (worldId ? undefined : ownedWorlds[0]);
     if (!world)
         return undefined;
     installWorldContent([world]);
@@ -257,10 +257,10 @@ export const api = {
         return sessionIdentity;
     },
     createWorld: async (definition: WorldDefinition, onCreated?: (worldId: string) => void): Promise<Player> => {
-        const world = map.world(await data(sdk.worlds.createWorld({ ...definition, postIdeas: postIdeasForWorld(definition) })));
-        trackMetrikaActivity('world', world.id);
-        onCreated?.(world.id);
-        return api.me(world.id);
+        const { id } = await data(sdk.worlds.createWorld({ ...definition, postIdeas: postIdeasForWorld(definition) }));
+        onCreated?.(id);
+        trackMetrikaActivity('world', id);
+        return api.me(id);
     },
     deleteWorld: async (id: string) => {
         await data(sdk.worlds.deleteWorld(id));
