@@ -508,7 +508,9 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .booster-button:focus-visible { outline:2px solid var(--lilac); outline-offset:2px; }
 .crystal-shop { display: grid; gap: 10px; }
 .crystal-shop:focus { outline: none; }
-.crystal-shop-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.crystal-shop-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.crystal-shop-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.crystal-shop-head-actions .chip { min-height: 44px; color: var(--lilac); }
 .crystal-shop-head h2 { font-size: 21px; line-height: 1.15; }
 .crystal-shop-item { display: grid; gap: 7px; padding: 12px; border: 1px solid var(--line2); border-radius: 16px; background: var(--card); }
 .crystal-shop-item h3 { font-size: 17px; }
