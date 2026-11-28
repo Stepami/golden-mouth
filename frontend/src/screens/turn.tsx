@@ -420,9 +420,11 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   }, [commentText, post.id])
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
   const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
-  const explanation = r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
   const boosterStock = nav.params.boosterStock as BoosterStock | undefined
   const boosted = r.virality === 'viralCard' || r.virality === 'flopGuard'
+  const awards = boosted ? r.ribbons.filter(award => award.title !== 'залёт') : r.ribbons
+  const crowd = r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
+    world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? pulse : undefined} />
   return (
     <div className="screen no-tab">
       <ChannelHead />
@@ -435,13 +437,13 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
             <div className="post-result-overview">
               <ResultDelta key={post.id} delta={r.delta} />
               {boosted && <ResultBooster result={r} stock={boosterStock} />}
-              {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
-                world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? pulse : undefined} />}
-              <dl className="post-result-stats small muted">
-                {(!boosted || r.boosterEffect?.viewsWithoutBooster === undefined) && <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>}
-                <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
-              </dl>
+              {!boosted && crowd}
+              {(!boosted || r.boosterEffect?.viewsWithoutBooster === undefined) && <dl className="post-result-stats small muted">
+                <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
+                {!boosted && <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>}
+              </dl>}
             </div>
+            {boosted && crowd}
             <div className="post-result-followup">
               {realPost && dailyBaseline && <DailyTaskResult key={post.id} baseline={dailyBaseline}
                 afterPost={dailyAfterPost} afterStar={dailyAfterStar} postId={post.id} onPulse={pulse} />}
@@ -452,11 +454,10 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
               </section>
               <div className="post-result-tools">
                 {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
-                <details className="result-details"><summary>Разбор поста</summary>
-                  {explanation && <p className="small muted">{explanation}</p>}
+                {(r.whys.length > 0 || awards.length > 0) && <details className="result-details"><summary>Разбор поста</summary>
                   <div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
-                  <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-                </details>
+                  <div className="result-awards">{awards.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
+                </details>}
                 {!guest && <button onClick={() => nav.push('02-7_share', { post })} className="result-share" aria-label="Поделиться" title="Поделиться">
                   {boosted ? <span className="result-share-mark" aria-hidden="true">↗</span> : 'Поделиться'}
                 </button>}
