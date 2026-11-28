@@ -433,7 +433,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
       <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}{!guest && <QuotedPost repostId={post.repostId} />}<div style={{ marginTop: 8 }}><span className="small muted">♡ {fmt(post.likes)}</span><span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
       <div className="sheet-bg post-result-backdrop" style={{ background: 'rgba(8,8,12,.55)' }}>
         <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}${boosted ? ' post-result--boosted' : ''}`}>
-          <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
+          <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')} />
           <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>
           <div className="post-result-content">
             {boosted && <div className="post-result-highlight"><ResultDelta key={post.id} delta={r.delta} /></div>}
@@ -490,7 +490,7 @@ function ResultBooster({ result, stock }: { result: PostResult; stock?: BoosterS
   return <section className={`post-result-booster${viral ? '' : ' post-result-booster--guard'}`}>
     <div className="post-result-booster-head">
       <span className="booster-result-mark" aria-hidden="true">{viral ? '↗' : '✦'}</span>
-      <strong>{viral ? 'Виральная карта' : 'Флоп-гард'}</strong>
+      <strong>{boosterTitles[viral ? 'viralCard' : 'flopGuard']}</strong>
       {remaining !== undefined && <span className="post-result-booster-stock">Осталось {resultNumber.format(remaining)}</span>}
     </div>
     {hasComparison ? <table className="booster-comparison" aria-label="Результат этого поста без карты и с картой">
