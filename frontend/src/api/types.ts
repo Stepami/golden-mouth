@@ -17,7 +17,12 @@ export type Star = Omit<Fields<Wire.StarResponse>, 'relation'>
 export type Skill = { [K in keyof Wire.SkillResponse]: number }
 export type CollectionCard = Wire.CollectionCardResponse
 export type BoosterStock = { viralCharges: number; flopGuardCharges: number }
-export type BoosterEffect = { multiplier?: number | null; extraViews?: number | null }
+export type BoosterEffect = {
+  multiplier?: number | null
+  extraViews?: number | null
+  subscriberDeltaWithoutBooster?: number
+  viewsWithoutBooster?: number
+}
 export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skills' | 'streak' | 'ageBand' | 'boosterStock'> & {
   energy: number; skills: Record<SkillId, Skill>
   boosterStock?: BoosterStock
