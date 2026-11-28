@@ -240,10 +240,13 @@ export function Live() {
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
-        {usedBooster && <div className="live-booster small" role="status"><span aria-hidden="true">✦</span> {boosterTitles[usedBooster]}</div>}
+        {usedBooster && <div className="live-booster" role="status">
+          <span className={`booster-result-mark${usedBooster === 'flopGuard' ? ' booster-result-mark--guard' : ''}`} aria-hidden="true">{usedBooster === 'viralCard' ? '↗' : '✦'}</span>
+          <div><b>{boosterTitles[usedBooster]}</b><p className="small muted">Собираем итог…</p></div>
+        </div>}
         {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает...</div>}
       </div>
-      <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'готовим пост' : 'Собираем итог…'}</div>
+      {!usedBooster && <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'готовим пост' : 'Собираем итог…'}</div>}
     </div>
   )
 }
@@ -419,42 +422,51 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
   const explanation = r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
   const boosterStock = nav.params.boosterStock as BoosterStock | undefined
+  const boosted = r.virality === 'viralCard' || r.virality === 'flopGuard'
   return (
     <div className="screen no-tab">
       <ChannelHead />
       <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}{!guest && <QuotedPost repostId={post.repostId} />}<div style={{ marginTop: 8 }}><span className="small muted">♡ {fmt(post.likes)}</span><span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
       <div className="sheet-bg post-result-backdrop" style={{ background: 'rgba(8,8,12,.55)' }}>
-        <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}`}>
+        <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}${boosted ? ' post-result--boosted' : ''}`}>
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
           <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>
           <div className="post-result-content">
-            <ResultDelta key={post.id} delta={r.delta} />
-            {(r.virality === 'viralCard' || r.virality === 'flopGuard') && <ResultBooster result={r} stock={boosterStock} />}
-            {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
-              world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? pulse : undefined} />}
-            <dl className="post-result-stats small muted">
-              <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
-              <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
-            </dl>
-            {realPost && dailyBaseline && <DailyTaskResult key={post.id} baseline={dailyBaseline}
-              afterPost={dailyAfterPost} afterStar={dailyAfterStar} postId={post.id} onPulse={pulse} />}
-            <section className="post-result-reaction" aria-label="Ответ персонажа">
-              <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong>{handle && <span className="small muted result-hero-handle">{handle}</span>}<div className="small muted">{guest?.world.title ?? world?.title} · AI-персонаж</div></div></div>
-              {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
-              {continuation && <p className="small muted world-reply-hint"><b>Как продолжить</b> {continuation}</p>}
-            </section>
-            {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
-            <details className="result-details"><summary>Разбор поста</summary>
-              {explanation && <p className="small muted">{explanation}</p>}
-              <div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
-              <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-            </details>
-            {!guest && <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>}
+            <div className="post-result-overview">
+              <ResultDelta key={post.id} delta={r.delta} />
+              {boosted && <ResultBooster result={r} stock={boosterStock} />}
+              {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
+                world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? pulse : undefined} />}
+              <dl className="post-result-stats small muted">
+                {(!boosted || r.boosterEffect?.viewsWithoutBooster === undefined) && <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>}
+                <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
+              </dl>
+            </div>
+            <div className="post-result-followup">
+              {realPost && dailyBaseline && <DailyTaskResult key={post.id} baseline={dailyBaseline}
+                afterPost={dailyAfterPost} afterStar={dailyAfterStar} postId={post.id} onPulse={pulse} />}
+              <section className="post-result-reaction" aria-label="Ответ персонажа">
+                <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={boosted ? 32 : 40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong>{handle && <span className="small muted result-hero-handle">{handle}</span>}<div className="small muted">{guest?.world.title ?? world?.title} · AI-персонаж</div></div></div>
+                {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
+                {continuation && <p className="small muted world-reply-hint"><b>Как продолжить</b> {continuation}</p>}
+              </section>
+              <div className="post-result-tools">
+                {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
+                <details className="result-details"><summary>Разбор поста</summary>
+                  {explanation && <p className="small muted">{explanation}</p>}
+                  <div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
+                  <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
+                </details>
+                {!guest && <button onClick={() => nav.push('02-7_share', { post })} className="result-share" aria-label="Поделиться" title="Поделиться">
+                  {boosted ? <span className="result-share-mark" aria-hidden="true">↗</span> : 'Поделиться'}
+                </button>}
+              </div>
+            </div>
           </div>
           <div className="post-result-actions">
             {guest?.hint}
             <span data-game-onboarding-post={comment ? post.id : undefined}><Button onClick={openConversation} disabled={waitingForReply}>
-              {guest ? guestSignupLabel : waitingForReply ? 'Ждём ответ героя…' : commentText ? (speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
+              {guest ? guestSignupLabel : waitingForReply ? 'Ждём ответ героя…' : commentText ? (!boosted && speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
             </Button></span>
             {!guest && !gameOnboardingActive(onboarding) && <Button secondary onClick={() => { tap('result_open_next_post'); nav.replace('02-1_compose') }}>Новый пост</Button>}
           </div>
@@ -475,24 +487,22 @@ function ResultBooster({ result, stock }: { result: PostResult; stock?: BoosterS
   const guardEffect = extraViews == null
     ? 'Карта добавила просмотры.'
     : `+${resultNumber.format(extraViews)} ${plural(extraViews, 'просмотр', 'просмотра', 'просмотров')}.`
-  return <div className="post-result-booster">
-    <span aria-hidden="true">✦</span>
-    <div className="post-result-booster-body">
-      <strong>{boosterTitles[viral ? 'viralCard' : 'flopGuard']}</strong>
-      {hasComparison ? <table className="booster-comparison" aria-label="Результат этого поста без карты и с картой">
-        <thead><tr><td></td><th scope="col">Без карты</th><th scope="col">С картой</th></tr></thead>
-        <tbody>
-          <tr><th scope="row">Подписчики</th><td>{resultChange.format(subscriberDeltaWithoutBooster)}</td><td>{resultChange.format(result.delta)}</td></tr>
-          <tr><th scope="row">Просмотры</th><td>{resultNumber.format(viewsWithoutBooster)}</td><td>{resultNumber.format(result.views)}</td></tr>
-        </tbody>
-      </table> : <p className="small">{viral
-        ? `Пост залетел. ${viralEffect}`
-        : `Карта защитила от отписок и дала прирост подписчиков. ${guardEffect}`}</p>}
-      <p className="small muted">{remaining !== undefined
-        ? `В запасе осталось ${resultNumber.format(remaining)}`
-        : 'Остаток карт пока недоступен.'}</p>
+  return <section className={`post-result-booster${viral ? '' : ' post-result-booster--guard'}`}>
+    <div className="post-result-booster-head">
+      <span className="booster-result-mark" aria-hidden="true">{viral ? '↗' : '✦'}</span>
+      <strong>{viral ? 'Виральная карта' : 'Флоп-гард'}</strong>
+      {remaining !== undefined && <span className="post-result-booster-stock">Осталось {resultNumber.format(remaining)}</span>}
     </div>
-  </div>
+    {hasComparison ? <table className="booster-comparison" aria-label="Результат этого поста без карты и с картой">
+      <thead><tr><td></td><th scope="col">Без карты</th><th scope="col">С картой</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Подписчики</th><td>{resultChange.format(subscriberDeltaWithoutBooster)}</td><td>{resultChange.format(result.delta)}</td></tr>
+        <tr><th scope="row">Просмотры</th><td>{resultNumber.format(viewsWithoutBooster)}</td><td>{resultNumber.format(result.views)}</td></tr>
+      </tbody>
+    </table> : <p className="small">{viral
+      ? `Пост залетел. ${viralEffect}`
+      : `Карта защитила от отписок и дала прирост подписчиков. ${guardEffect}`}</p>}
+  </section>
 }
 
 export const Result = () => { const n = useNav(); const guest = useGuestSession(); if (guest) return <ResultCard r={guest.result} post={guest.post} theme="normal" />; const r = (n.params.result as PostResult) ?? results.normal; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="normal" /> }

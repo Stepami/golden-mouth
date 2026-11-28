@@ -123,6 +123,7 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
     light.addColorStop(0, loss ? '#3b2d42' : '#373052')
     light.addColorStop(.55, '#22223a')
     light.addColorStop(1, '#15151f')
+    const verticalScale = Math.min(1, height / 124)
     people = []
     for (const [row, columns] of rows.entries()) {
       const depth = rows.length === 1 ? .88 : row / (rows.length - 1)
@@ -132,8 +133,8 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
         const id = people.length
         const x = margin + (col + .5) * spacing + (scatter(id + 47) - .5) * spacing * .5
         const wave = Math.min(waves - 1, Math.floor((depth * .70 + scatter(id + 912) * .30) * waves))
-        const size = Math.min(34, spacing * (.74 + scatter(id + 19) * .39))
-        const y = Math.max(size * 1.4 + 4, 39 + depth * (height - 48) + scatter(id + 140) * 7)
+        const size = Math.min(34, spacing * (.74 + scatter(id + 19) * .39)) * verticalScale
+        const y = Math.max(size * 1.4 + 4, depth * height + (39 - depth * 48 + scatter(id + 140) * 7) * verticalScale)
         people.push({
           id, x, y, size,
           depth, side: x < width / 2 ? -1 : 1, duration: (loss ? 780 : 570) + scatter(id + 170) * 280,
