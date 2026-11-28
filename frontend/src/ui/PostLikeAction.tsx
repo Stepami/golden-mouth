@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { api } from '../api/client'
 import type { PostDetailResponse } from '../api/types'
-import { usePlayer } from '../app/store'
+import { useStore } from '../app/store'
 import { track } from '../app/log'
 import { PostLikes } from './PostLikes'
 
@@ -9,15 +9,18 @@ export function PostLikeAction({ postId, likes, likedBy, onSaved }: {
   postId: string; likes: number; likedBy: string[]
   onSaved: (post: PostDetailResponse) => void
 }) {
-  const player = usePlayer()
-  const author = `Player_${player.id.replaceAll('-', '').toLowerCase()}`
-  const scope = `${player.id}:${player.worldInstanceId}:${postId}`
+  const { player, refresh } = useStore()
+  const profile = player!
+  const author = `Player_${profile.id.replaceAll('-', '').toLowerCase()}`
+  const scope = `${profile.id}:${profile.worldInstanceId}:${postId}`
   const current = useRef(scope); current.current = scope
   useEffect(() => { current.current = scope; return () => { current.current = '' } }, [scope])
   const confirmed = (saved: PostDetailResponse) => {
     if (current.current !== scope) return
     onSaved(saved)
-    track('tap', { to: 'post_mark', own: saved.likedBy.includes(author), id: postId })
+    const liked = saved.likedBy.includes(author)
+    track('tap', { to: 'post_mark', own: liked, id: postId })
+    if (liked && profile.dailyChallenge?.completion.likes === false) void refresh()
   }
   return <PostLikes key={scope} count={likes + likedBy.length} marked={likedBy.includes(author)} onMark={async desired => {
     try {

@@ -12,10 +12,11 @@ import { StoryGoal, StoryGoalContent } from '../ui/StoryGoal'
 import { ResultCrowd } from '../ui/ResultCrowd'
 import { DailyTasks } from '../ui/DailyTasks'
 import { DailyTaskResult, dailyTaskBaseline, type DailyTaskBaseline } from '../ui/DailyTaskResult'
+import { useResultHaptics } from '../ui/resultHaptics'
 import { Resources } from '../ui/Resources'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
+import { shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
 import { firstPost, results } from '../api/mock'
 import type { CommentT, Post, PostResult } from '../api/types'
@@ -196,8 +197,13 @@ export function Live() {
       const starTask = dailyBaseline.tasks.find(task => task.type === 'starComment' && !task.done)
       const commentPromise = api.initialComment(created.post.id, created.predictedAuthorId).catch(() => null).then(saved => {
         if (firstPost) track('onboarding_step', { step: 'initial_reaction_result', ok: !!saved?.comments.length })
-        if (!created.post.repostId && starTask?.starId && saved?.comments.some(comment => comment.authorId === `Star_${starTask.starId}`)) void refresh()
         return saved
+      })
+      const dailyAfterPost = latest && dailyTaskBaseline(latest)
+      const dailyAfterStar = commentPromise.then(async saved => {
+        if (created.post.repostId || !starTask?.starId || !saved?.comments.some(comment => comment.authorId === `Star_${starTask.starId}`)) return
+        const confirmed = await refresh()
+        return confirmed && dailyTaskBaseline(confirmed)
       })
       await new Promise(resolve => setTimeout(resolve, 1300))
       if (!active) return
@@ -208,7 +214,7 @@ export function Live() {
         none: '02-3_result', viral: '02-5_viral', flop: '02-4_flop',
         viralCard: '02-5_viral', flopGuard: '02-3_result',
       }[result.virality]
-      nav.replace(screen, { result, post: created.post, dailyBaseline, commentPromise, predictedAuthorId: created.predictedAuthorId })
+      nav.replace(screen, { result, post: created.post, dailyBaseline, dailyAfterPost, dailyAfterStar, commentPromise, predictedAuthorId: created.predictedAuthorId })
     })() }, 0)
     return () => { active = false; clearTimeout(start) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -260,13 +266,6 @@ function PublishError() {
 const resultNumber = new Intl.NumberFormat('ru-RU')
 const viewedResults = new Set<string>()
 
-function resultPulse(phase: 'open' | 'wave', delta: number) {
-  if (!inTelegram) return
-  const style = phase === 'open' ? 'medium' : delta >= 50_000 ? 'heavy' : 'rigid'
-  try { hapticFeedback.impactOccurred.ifAvailable(style) }
-  catch { /* The result remains available without haptics. */ }
-}
-
 function ResultDelta({ delta }: { delta: number }) {
   const total = Math.abs(delta)
   const [shown, setShown] = useState(() =>
@@ -317,6 +316,9 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   const guest = useGuestSession(); const store = useStore()
   const nav = useNav(); const player = guest?.player ?? store.player!
   const dailyBaseline = nav.params.dailyBaseline as DailyTaskBaseline | undefined
+  const dailyAfterPost = nav.params.dailyAfterPost as DailyTaskBaseline | undefined
+  const dailyAfterStar = nav.params.dailyAfterStar as Promise<DailyTaskBaseline | undefined> | undefined
+  const pulse = useResultHaptics()
   const onboarding = useGameOnboarding()
   const [post, setPost] = useState(initialPost)
   const [commentFailed, setCommentFailed] = useState(false)
@@ -417,12 +419,13 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           <div className="post-result-content">
             <ResultDelta key={post.id} delta={r.delta} />
             {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
-              world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? resultPulse : undefined} />}
+              world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? pulse : undefined} />}
             <dl className="post-result-stats small muted">
               <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
               <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
             </dl>
-            {!guest && dailyBaseline && <DailyTaskResult baseline={dailyBaseline} postId={post.id} />}
+            {realPost && dailyBaseline && <DailyTaskResult key={post.id} baseline={dailyBaseline}
+              afterPost={dailyAfterPost} afterStar={dailyAfterStar} postId={post.id} onPulse={pulse} />}
             <section className="post-result-reaction" aria-label="Ответ персонажа">
               <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong>{handle && <span className="small muted result-hero-handle">{handle}</span>}<div className="small muted">{guest?.world.title ?? world?.title} · AI-персонаж</div></div></div>
               {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
@@ -600,7 +603,12 @@ export function Thread() {
   const send = async () => {
     if (!post || !targetAvailable || !draft.text.trim() || sending) return
     if (guest) { guest.signUp(); return }
-    const { patch } = store
+    const { patch, refresh } = store
+    const dailyTasks = dailyTaskBaseline(player).tasks
+    const commentsPending = dailyTasks.some(task => task.type === 'comments' && !task.done)
+    const starTask = dailyTasks.find(task => task.type === 'starComment' && !task.done)
+    let starSaved = false
+    let commentingProgress: ReturnType<typeof refresh> | undefined
     if (player.postsLeft < 1 && !draft.submitted) { setReplyError('Энергия закончилась. Новая появится в 9:00.'); return }
     const ctrl = new AbortController()
     controller.current = ctrl
@@ -620,7 +628,19 @@ export function Thread() {
         },
         onSaved: saved => {
           if (ctrl.signal.aborted || activeKey.current !== key) return
-          if (saved.post.comments.some(comment => comment.requestId === draft.requestId)) { playerSaved = true; onboardingReplySaved(post.id, draft.requestId) }
+          if (!playerSaved && saved.post.comments.some(comment => comment.requestId === draft.requestId)) {
+            playerSaved = true
+            onboardingReplySaved(post.id, draft.requestId)
+            if (commentsPending) commentingProgress = refresh()
+          }
+          if (!starSaved && starTask?.starId && !post.repostId &&
+            post.authorId === `Player_${player.id.replaceAll('-', '')}` &&
+            saved.post.comments.some(comment => comment.authorId === `Star_${starTask.starId}` &&
+              (comment.requestId === `${draft.requestId}-star` || comment.requestId === `${draft.requestId}-extra`))) {
+            starSaved = true
+            if (commentingProgress) void commentingProgress.then(refresh)
+            else void refresh()
+          }
           const { postId: id, ...detail } = saved.post
           setPost(current => ({ ...detail, id, likes: current?.likes ?? detail.likes, likedBy: current?.likedBy ?? detail.likedBy })); patch({ subs: saved.subscribers, postsLeft: saved.energyLeft })
         },

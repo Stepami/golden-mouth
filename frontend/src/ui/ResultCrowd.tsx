@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { WorldId } from '../api/types'
+import type { CrowdCue } from './resultHaptics'
 
 const comparisonPlaces = [
   { name: 'Териберки', population: 550, year: 2021, source: 'https://www.wikidata.org/wiki/Q4353950#P1082' },
@@ -20,7 +21,7 @@ const pulsedPublications = new Set<string>()
 let cheerOffset = 0
 
 export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }: {
-  delta: number; publication: string; world: WorldId; avatarStyle?: string; onPulse?: (phase: 'open' | 'wave', delta: number) => void
+  delta: number; publication: string; world: WorldId; avatarStyle?: string; onPulse?: (phase: CrowdCue) => void
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [unavailable, setUnavailable] = useState(false)
@@ -35,19 +36,8 @@ export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }:
     let still = motion.matches || document.hidden || new URLSearchParams(location.search).has('shot')
     let disposed = false
     let stop: ((settle?: boolean) => void) | undefined
-    let mayPulse = false
-    const openingFrame = requestAnimationFrame(() => {
-      if (!onPulse || still || document.hidden || pulsedPublications.has(publication)) return
-      pulsedPublications.add(publication)
-      mayPulse = true
-      onPulse('open', delta)
-    })
-    const pulse = () => {
-      if (mayPulse && !still && !document.hidden) onPulse?.('wave', delta)
-    }
     const finish = () => {
       still = true
-      cancelAnimationFrame(openingFrame)
       stop?.(true)
     }
     const visibility = () => { if (document.hidden) finish() }
@@ -60,12 +50,14 @@ export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }:
     void import('./drawResultCrowd').then(async ({ prepareCrowd }) => {
       if (disposed) return
       const play = await prepareCrowd({ ctx, delta, world, avatarStyle, offset })
-      if (!disposed) stop = play(still, pulse)
+      if (disposed) return
+      const mayPulse = !!onPulse && !still && !pulsedPublications.has(publication)
+      if (mayPulse) pulsedPublications.add(publication)
+      stop = play(still, phase => { if (mayPulse && !still && !document.hidden) onPulse(phase) })
     }).catch(() => { if (!disposed) setUnavailable(true) })
 
     return () => {
       disposed = true
-      cancelAnimationFrame(openingFrame)
       stop?.()
       document.removeEventListener('visibilitychange', visibility)
       motion.removeEventListener('change', motionChange)
