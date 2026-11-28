@@ -7,7 +7,6 @@ import { selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 import { Button, Sheet, TopBar } from '../ui'
 import { AdvancedSetup, DescriptionSetup, WorldCreated } from './worldWizard'
 import { register } from '.'
-import { AgeRuleNote } from './worldAdvanced'
 import { worldArt } from '../app/worldPrototype'
 import { avatarPersonalization } from '../app/avatarPersonalization'
 
@@ -38,7 +37,7 @@ function WorldDetailsScreen() {
   return <div className="screen no-tab"><TopBar onBack={nav.back} title="Настройки мира" rightPlain right={<button className="header-action delete-trigger" disabled={loading} onClick={() => { setError(''); setConfirmDelete(true) }}>🧺🌎 Удалить</button>} /><div className="pad world-details">
     <h1>{r.emoji} {r.title}</h1><p className="muted world-details-pitch">{worldArt[p.world]?.pitch ?? r.summary}</p>
     <div className="world-about"><h2>Твоя история</h2><p>{r.firstContext}</p></div>
-    <div className="world-about"><h2>Как играть</h2><p>Публикуй находки, получай реакции героев и отвечай им, чтобы развивать историю.</p></div><details className="editor-extra"><summary>Все особенности мира</summary><p>{r.description}</p><div className="world-rule-list">{r.rules.map((rule, i) => rule.locked ? !custom && <AgeRuleNote key={i} teen={!p.ageBand || p.ageBand === '14-17'} /> : <p key={i}>✓ {rule.text}</p>)}</div></details>
+    <div className="world-about"><h2>Как играть</h2><p>Публикуй находки, получай реакции героев и отвечай им, чтобы развивать историю.</p></div><details className="editor-extra"><summary>Все особенности мира</summary><p>{r.description}</p><div className="world-rule-list">{r.rules.filter(rule => !rule.locked).map((rule, i) => <p key={i}>✓ {rule.text}</p>)}</div></details>
     <p className="small muted editor-save-note">Подписчики и прогресс сохранятся.</p>
     <Button disabled={loading} onClick={edit}>{loading ? 'Загружаем…' : 'Редактировать мир'}</Button>
     <Button secondary onClick={() => nav.push('01-3_world')}>Выбрать другой мир</Button>

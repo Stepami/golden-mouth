@@ -29,7 +29,8 @@ import { contentOf, optionalWorldTemplate, worldOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
-import { submitOnDesktopEnter, TextField } from '../ui/TextField'
+import './postResult.css'
+import { hasDesktopPointer, submitOnDesktopEnter, TextField } from '../ui/TextField'
 import { completePostDraft, draftKey, hasPostDraft, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 import { heroHandle } from '../app/handle'
@@ -60,6 +61,7 @@ export function Compose() {
   })
   const canPrefill = useRef(!guest && mayPrefill && !firstPostConfirmed)
   const [checkingFirstPost, setCheckingFirstPost] = useState(canPrefill.current)
+  const postInput = useRef<HTMLTextAreaElement>(null)
   const text = draft.text
   const [durable, setDurable] = useState(true)
   const edit = (value: string, fromIdea = false) => {
@@ -69,6 +71,13 @@ export function Compose() {
     setDraft(next)
     if (guest) guest.editPost(value)
     else setDurable(savePostDraft(key, next))
+  }
+  const selectIdea = (idea: string) => {
+    const next = idea.replace(/[«»]/g, '')
+    const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text)
+    if (text.trim() && !isIdea && !window.confirm('Заменить написанный текст выбранной идеей?')) return
+    edit(next, true)
+    if (hasDesktopPointer()) postInput.current?.focus()
   }
   useEffect(() => {
     if (!guest && (draft.text.length || !canPrefill.current)) setDurable(savePostDraft(key, draft))
@@ -122,7 +131,7 @@ export function Compose() {
       </WorldContext>
       <div className="pad">
         {repostId && <QuotedPost repostId={repostId} />}
-        <TextField label="Твой пост" value={text} mentions={mentions} onSubmit={publish} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
+        <TextField inputRef={postInput} label="Твой пост" value={text} mentions={mentions} onSubmit={publish} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => selectIdea(idea)}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
@@ -399,7 +408,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
     <div className="screen no-tab">
       <ChannelHead />
       <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}{!guest && <QuotedPost repostId={post.repostId} />}<div style={{ marginTop: 8 }}><span className="small muted">♡ {fmt(post.likes)}</span><span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
-      <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
+      <div className="sheet-bg post-result-backdrop" style={{ background: 'rgba(8,8,12,.55)' }}>
         <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}`}>
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
           <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>

@@ -1,0 +1,76 @@
+.game-shell .worlds-home .world-cover-image,
+.world-overview .world-art.world-hero,
+.first-story-screen .first-story .world-art.first-story-cover,
+.game-context .game-world-summary .world-art {
+  height: auto;
+  aspect-ratio: 3 / 2;
+}
+
+.owned-stories .world-resume .world-resume-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  min-width: 0;
+}
+.owned-stories .world-resume-body > :first-child { flex-shrink: 0; }
+.game-shell .worlds-home .owned-stories .world-resume {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--card);
+}
+.game-shell .owned-stories .world-resume-cover {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  flex: 0 0 30%;
+  max-width: 155px;
+  height: auto;
+  min-height: 118px;
+}
+.owned-stories .world-resume-cover img { position: absolute; inset: 0; }
+.owned-stories .world-resume-cover::after { content: none; }
+.owned-stories .world-resume .world-resume-body .muted { color: var(--muted); }
+.worlds-home .owned-stories { display: grid; gap: 10px; }
+
+.story-setup > .pad > h1 + p { margin: 8px 0 18px; }
+.persona-setup .persona-option + .card,
+.persona-setup .pad > .card + .card { margin-top: 14px; }
+.persona-setup .pad > .card p + p { margin-top: 8px; }
+.persona-setup .pad > .card + .label { margin-top: 22px; }
+.persona-setup .profile-preview { margin-top: 16px; }
+.mood-setup .pad > section { margin-bottom: 26px; }
+.mood-setup .pad > section .small { margin-top: 8px; }
+.mood-setup .pad > section h2 { margin-bottom: 10px; }
+.mood-setup .pad .drama-options { margin: 0; }
+.mood-setup .quick-summary { margin-top: 18px; }
+
+@media (min-width: 621px) {
+  .game-shell .story-setup.no-tab {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+  .game-shell .story-setup > .bottom-cta {
+    position: static;
+    width: auto;
+    margin-inline: 16px;
+    padding-inline: 0;
+    transform: none;
+  }
+}
+@media (min-width: 1051px) {
+  .game-shell .worlds-home .owned-stories {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  }
+}
+@media (min-width: 621px) and (max-width: 1050px) {
+  .game-shell:has(> .tabbar) .story-setup.no-tab {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}

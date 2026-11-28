@@ -1,3 +1,4 @@
+import './feed.css'
 import { reachMetrikaGoal } from '../app/metrika'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
@@ -151,18 +152,23 @@ function Feed() {
   }
   const gestures = usePostListGestures(key, list, refresh)
   return (
-    <div className="screen post-list-screen" ref={gestures.screenRef}>
+    <div className="screen post-list-screen feed-screen" ref={gestures.screenRef}>
       <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
       <TopBar title={`Лента ${w.gen}`} right={<button onClick={() => nav.push('05-11_world_rules')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 13 }}>📜 Как устроен мир</button>} />
       <div className="pad">
+        <button type="button" className="text-button feed-refresh" disabled={!!list.pending} onClick={() => void refresh()}>Обновить ленту</button>
         {list.items.map((f, i) => f.kind === 'news'
           ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ МИРА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
           : <div className={newIds.includes(f.postId ?? "") ? "feed-arrival" : undefined} key={f.postId ?? `post-${i}`}><FeedPostCard item={f} onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item))} /></div>)}
         {list.pending === 'first' && !list.ready && <Card>Загружаем ленту…</Card>}
-        {list.error === 'first' && <Card>Не получилось обновить ленту. Потяни вниз от начала списка, чтобы повторить.</Card>}
-        {list.ready && list.items.length === 0 && <Card>В ленте пока нет постов.</Card>}
+        {list.error === 'first' && <Card>Не получилось обновить ленту. Попробуй ещё раз.</Card>}
+        {list.ready && !list.error && list.items.length === 0 && <Card>
+          <b>В ленте пока нет постов</b>
+          <p className="muted">Здесь появятся твои публикации и посты звёзд этого мира.</p>
+          <button type="button" className="text-button" onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Написать пост</button>
+        </Card>}
         {(refreshNote && !list.pending) && <div role="status" className="small muted refresh-note">{refreshNote}</div>}
-        <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext && list.items.length > 0 ? 'Все посты загружены' : ''}</div>
+        <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Обнови ленту и попробуй ещё раз.' : list.ready && !list.hasNext && list.items.length > 0 ? 'Все посты загружены' : ''}</div>
       </div>
     </div>
   )

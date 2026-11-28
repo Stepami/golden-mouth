@@ -1,25 +1,31 @@
-import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { Avatar } from '.'
 
 type Mention = { id: string; name: string; handle: string; avatarSeed: string }
 const mentionAtEnd = /(?:^|[^\p{L}\p{N}._%+@-])@([\p{L}\p{N}_.-]*)$/u
 
-export function submitOnDesktopEnter(event: KeyboardEvent<HTMLTextAreaElement>, submit?: () => void, allowCommand = false) {
-  if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || (event.metaKey && !allowCommand) ||
+export function hasDesktopPointer() {
+  return window.matchMedia('(any-pointer: fine)').matches
+}
+
+export function submitOnDesktopEnter(event: KeyboardEvent<HTMLTextAreaElement>, submit?: () => void) {
+  if (event.key !== 'Enter' || event.shiftKey || event.altKey ||
     event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 ||
-    !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
+    (!event.ctrlKey && !event.metaKey && !hasDesktopPointer())) return
   event.preventDefault()
   if (!event.repeat) submit?.()
 }
 
 /** Готовая идея заполняет только полностью пустое поле. Очистка обратима. */
-export function TextField({ label, value, onChange, ideas = [], maxLength = 2000, rows = 3, placeholder, disabled = false, fromIdea = false, visibleLength, onInteract, mentions, onSubmit }: {
+export function TextField({ label, value, onChange, ideas = [], maxLength = 2000, rows = 3, placeholder, disabled = false, fromIdea = false, visibleLength, onInteract, mentions, onSubmit, inputRef }: {
+  inputRef?: RefObject<HTMLTextAreaElement | null>
   mentions?: readonly Mention[]
   onSubmit?: () => void
   visibleLength?: number; onInteract?: () => void
   label: string; value: string; onChange: (text: string, fromIdea?: boolean) => void; ideas?: string[]; maxLength?: number; rows?: number; placeholder?: string; disabled?: boolean; fromIdea?: boolean
 }) {
-  const input = useRef<HTMLTextAreaElement>(null)
+  const localInput = useRef<HTMLTextAreaElement>(null)
+  const input = inputRef ?? localInput
   const wasRevealing = useRef(false)
   const [undo, setUndo] = useState<{ text: string; fromIdea: boolean } | null>(null)
   const menuId = useId()
@@ -79,15 +85,15 @@ export function TextField({ label, value, onChange, ideas = [], maxLength = 2000
       aria-controls={choices.length ? menuId : undefined} aria-activedescendant={selected >= 0 ? `${menuId}-${selected}` : undefined}
       onKeyDown={event => {
         if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
-        if (onSubmit && (!choices.length || (event.key === 'Enter' && event.metaKey))) {
-          submitOnDesktopEnter(event, onSubmit, true)
+        if (onSubmit && (!choices.length || (event.key === 'Enter' && (event.metaKey || event.ctrlKey)))) {
+          submitOnDesktopEnter(event, onSubmit)
           return
         }
         if (!choices.length) return
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault()
           setActive((selected + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length)
-        } else if (event.key === 'Enter' && !event.shiftKey) {
+        } else if (event.key === 'Enter' && !event.shiftKey && !event.altKey) {
           event.preventDefault()
           if (!event.repeat) insertMention(choices[selected])
         } else if (event.key === 'Escape') {
