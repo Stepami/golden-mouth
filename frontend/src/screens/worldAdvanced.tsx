@@ -4,12 +4,12 @@ import { heroHandle } from '../app/handle'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { isOwnWorldSetup, ownWorldRole, setWorldDraft, updateWorldDraft, type WorldDraft } from '../app/worldDraft'
-import { worldOf } from '../api/worldContent'
-import type { Address, WorldDefinition } from '../api/types'
+import type { Address, WorldDefinition, WorldDocument } from '../api/types'
 import { Avatar, Button, Segmented, TopBar, plural } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { DifficultyPicker, DramaPicker } from './worldQuick'
 import { heroTraits, WorldCardPreview, WorldEditorHelp, type WorldHelpTarget } from './worldEditorHelp'
+import { WorldCharacterPicker } from './worldCharacterPicker'
 
 export function AgeRuleNote({ teen = true }: { teen?: boolean }) {
   return <div className="age-rule-note"><b>🔒 Ограничения контента</b><p>{teen ? 'Без взрослой сексуализированной подачи. Дружба и романтические симпатии допустимы.' : 'Чувствительные темы можно обсуждать без откровенных подробностей.'}</p><p className="small muted">Травля и откровенный контент запрещены для всех.</p></div>
@@ -68,11 +68,12 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
   const custom = isOwnWorldSetup(draft)
   const ownWorld = custom || draft.customEditing
   const role = ownWorld ? ownWorldRole(draft) : d.role
-  const source = custom && player ? { player, title: worldOf(player.world).title } : undefined
   const [open, setOpen] = useState(editRole ? 'person' : custom ? 'world' : '')
   const [invalid, setInvalid] = useState('')
   const [guide, setGuide] = useState<WorldHelpTarget | null>(null)
+  const [choosingCharacter, setChoosingCharacter] = useState(false)
   const guideButton = useRef<HTMLButtonElement>(null)
+  const copyButton = useRef<HTMLButtonElement>(null)
   const focused = useRef<HTMLElement | null>(null)
   useEffect(() => {
     const reveal = () => { if (focused.current && document.activeElement === focused.current) showEditorField(focused.current) }
@@ -93,6 +94,14 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
   const closeGuide = () => {
     setGuide(null)
     requestAnimationFrame(() => guideButton.current?.focus({ preventScroll: true }))
+  }
+  const closePicker = () => {
+    setChoosingCharacter(false)
+    requestAnimationFrame(() => copyButton.current?.focus({ preventScroll: true }))
+  }
+  const copyCharacter = (world: WorldDocument) => {
+    setWorldDraft({ ...draft, ownRoleEdited: true, definition: { ...d, name: world.name, avatar: world.avatar, role: world.role } })
+    closePicker()
   }
   const personRequired = !custom || d.stars.length < 2
   const requiredFields = [
@@ -181,12 +190,9 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
     </>)}
     {section('person', 'Твой персонаж', d.name ? [d.name, role].filter(Boolean).join(' · ') : 'Имя, роль и портрет', <>
       {ownWorld && <p className="small muted">Характер твоего персонажа раскрывается в твоих постах и ответах.</p>}
-      {source && <div className="world-editor-copy">
-        <div className="world-editor-action">
-          <Button secondary onClick={() => setWorldDraft({ ...draft, ownRoleEdited: true, definition: { ...d, name: source.player.name, avatar: source.player.handle, role: source.player.role } })}>Скопировать персонажа</Button>
-          {helpButton('Скопировать персонажа', { topic: 'copyPersona' })}
-        </div>
-        <p className="small muted">{source.player.name} из мира «{source.title}»</p>
+      {custom && player && <div className="world-editor-action">
+        <button ref={copyButton} type="button" className="btn secondary" aria-haspopup="dialog" onClick={() => setChoosingCharacter(true)}>Скопировать персонажа</button>
+        {helpButton('Скопировать персонажа', { topic: 'copyPersona' })}
       </div>}
       {text('name', 'Имя персонажа', { maxLength: 80, required: personRequired, info: { topic: 'name' } })}
       {text('role', 'Кто ты в этой истории', { maxLength: 80, required: personRequired, placeholder: 'Например, репортёр', info: { topic: 'role' },
@@ -265,5 +271,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
     {error && <p className="down" role="alert">{error}</p>}
     {uncertain && <Button secondary onClick={onCheck}>Проверить список миров</Button>}
     <Button disabled={saving || uncertain} onClick={() => missing ? focusMissing(missing) : onSave()}>{saving ? 'Сохраняем…' : custom ? 'Выбрать персонажа' : draft.previewOnly ? 'Посмотреть демо' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'}</Button>
-  </div>{guide && <WorldEditorHelp target={guide} draft={draft} source={source} onClose={closeGuide} />}</div>
+  </div>{guide && <WorldEditorHelp target={guide} draft={draft} onClose={closeGuide} />}
+    {choosingCharacter && <WorldCharacterPicker currentWorldId={player?.worldInstanceId} onChoose={copyCharacter} onClose={closePicker} />}
+  </div>
 }

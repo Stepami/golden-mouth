@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
-import type { Player, WorldDefinition } from '../api/types'
+import type { WorldDefinition } from '../api/types'
 import { displayHandle, heroHandle } from '../app/handle'
 import { ownWorldRole, type WorldDraft } from '../app/worldDraft'
 import { dramaOptions } from '../app/worldPrototype'
@@ -16,7 +16,7 @@ const topics = {
   name: ['Имя персонажа', 'От этого имени ты пишешь посты и ответы. Оно видно в шапке канала и рядом с твоими сообщениями.'],
   role: ['Роль персонажа', 'Роль видна при выборе персонажа и в списке историй. Она помогает героям понять, чем ты занимаешься в мире. Характер задают твои посты и ответы.'],
   avatar: ['Ник персонажа', 'Виден под именем в канале. По нику и стилю собирается портрет персонажа.'],
-  copyPersona: ['Скопировать персонажа', 'Кнопка подставит имя, ник и роль из мира с пометкой «Текущая» в «Моих историях». После копирования поля можно отредактировать. Подписчики и прогресс у нового мира свои.'],
+  copyPersona: ['Скопировать персонажа', 'Выбери любую сохранённую историю. Имя, ник и роль из неё подставятся в черновик. Их можно отредактировать. Подписчики и прогресс у нового мира свои.'],
   avatarStyle: ['Стиль портретов', 'Меняет внешний вид аватарок твоего персонажа и героев в канале, ленте и ответах.'],
   address: ['Как к тебе обращаться', 'Герои учитывают выбранное обращение в ответах. Настройка применяется к твоему профилю и в других мирах.'],
   personalization: ['Персонализация аватарки', 'Учитывает возраст и обращение в тех стилях портрета, где есть такие детали. При выключении портрет зависит от ника и стиля.'],
@@ -70,8 +70,8 @@ function Example({ title, children }: { title: string; children: ReactNode }) {
   return <div className="world-help-example"><p className="small muted">{title}</p>{children}</div>
 }
 
-export function WorldEditorHelp({ target, draft, source, onClose }: {
-  target: WorldHelpTarget; draft: WorldDraft; source?: { player: Player; title: string }; onClose: () => void
+export function WorldEditorHelp({ target, draft, onClose }: {
+  target: WorldHelpTarget; draft: WorldDraft; onClose: () => void
 }) {
   const [title, copy] = topics[target.topic]
   const dialog = useRef<HTMLDialogElement>(null)
@@ -87,14 +87,14 @@ export function WorldEditorHelp({ target, draft, source, onClose }: {
     <div className="world-help-sheet">
       <h2 id="world-help-title">{title}</h2>
       <p>{copy}</p>
-      <HelpPreview target={target} draft={draft} source={source} />
+      <HelpPreview target={target} draft={draft} />
       <button type="button" className="btn secondary" onClick={onClose} autoFocus>Понятно</button>
     </div>
   </dialog>
 }
 
-function HelpPreview({ target: { topic, value, star, achievement }, draft, source }: {
-  target: WorldHelpTarget; draft: WorldDraft; source?: { player: Player; title: string }
+function HelpPreview({ target: { topic, value, star, achievement }, draft }: {
+  target: WorldHelpTarget; draft: WorldDraft
 }) {
   const d = draft.definition
   const title = d.title.trim() || 'Город маяков'
@@ -133,11 +133,7 @@ function HelpPreview({ target: { topic, value, star, achievement }, draft, sourc
     case 'role':
       return persona('Выбор персонажа', true)
     case 'copyPersona':
-      return source ? <Example title={`Мир «${source.title}» · Текущая история`}><Card>
-        <div className="editor-preview"><Avatar seed={source.player.handle} avatarStyle={source.player.avatarStyle} />
-          <div><b>{source.player.name}</b><p className="small muted">{displayHandle(source.player.handle)}</p><p>{source.player.role}</p></div>
-        </div>
-      </Card></Example> : null
+      return persona('Карточка персонажа', true)
     case 'address':
       return reply(draft.address === 'she' ? `${name}, ты нашла карту?` : draft.address === 'he' ? `${name}, ты нашёл карту?` : `${name}, что на карте?`)
     case 'heroes': case 'heroName':
