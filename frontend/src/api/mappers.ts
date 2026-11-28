@@ -44,6 +44,8 @@ export function result(value: Input<Wire.PostResultResponse>): Ui.PostResult {
     boosterEffect: effect == null ? undefined : {
       multiplier: effect.multiplier == null ? undefined : number(effect.multiplier),
       extraViews: effect.extraViews == null ? undefined : number(effect.extraViews),
+      subscriberDeltaWithoutBooster: effect.subscriberDeltaWithoutBooster == null ? undefined : number(effect.subscriberDeltaWithoutBooster),
+      viewsWithoutBooster: effect.viewsWithoutBooster == null ? undefined : number(effect.viewsWithoutBooster),
     },
   }
 }

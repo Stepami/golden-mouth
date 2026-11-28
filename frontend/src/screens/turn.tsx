@@ -264,6 +264,7 @@ function PublishError() {
 }
 
 const resultNumber = new Intl.NumberFormat('ru-RU')
+const resultChange = new Intl.NumberFormat('ru-RU', { signDisplay: 'exceptZero' })
 const viewedResults = new Set<string>()
 
 function ResultDelta({ delta }: { delta: number }) {
@@ -419,13 +420,13 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>
           <div className="post-result-content">
             <ResultDelta key={post.id} delta={r.delta} />
+            {(r.virality === 'viralCard' || r.virality === 'flopGuard') && <ResultBooster result={r} stock={boosterStock} />}
             {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
               world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? pulse : undefined} />}
             <dl className="post-result-stats small muted">
               <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
               <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
             </dl>
-            {(r.virality === 'viralCard' || r.virality === 'flopGuard') && <ResultBooster result={r} stock={boosterStock} />}
             {realPost && dailyBaseline && <DailyTaskResult key={post.id} baseline={dailyBaseline}
               afterPost={dailyAfterPost} afterStar={dailyAfterStar} postId={post.id} onPulse={pulse} />}
             <section className="post-result-reaction" aria-label="Ответ персонажа">
@@ -456,7 +457,8 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
 
 function ResultBooster({ result, stock }: { result: PostResult; stock?: BoosterStock }) {
   const viral = result.virality === 'viralCard'
-  const { multiplier, extraViews } = result.boosterEffect ?? {}
+  const { multiplier, extraViews, subscriberDeltaWithoutBooster, viewsWithoutBooster } = result.boosterEffect ?? {}
+  const hasComparison = subscriberDeltaWithoutBooster !== undefined && viewsWithoutBooster !== undefined
   const remaining = stock && (viral ? stock.viralCharges : stock.flopGuardCharges)
   const viralEffect = multiplier == null
     ? 'Карта применила множитель к просмотрам и приросту подписчиков.'
@@ -466,11 +468,17 @@ function ResultBooster({ result, stock }: { result: PostResult; stock?: BoosterS
     : `+${resultNumber.format(extraViews)} ${plural(extraViews, 'просмотр', 'просмотра', 'просмотров')}.`
   return <div className="post-result-booster">
     <span aria-hidden="true">✦</span>
-    <div>
+    <div className="post-result-booster-body">
       <strong>{viral ? 'Сработала виральная карта' : 'Сработал флоп-гард'}</strong>
-      <p className="small">{viral
+      {hasComparison ? <table className="booster-comparison" aria-label="Результат этого поста без карты и с картой">
+        <thead><tr><td></td><th scope="col">Без карты</th><th scope="col">С картой</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Подписчики</th><td>{resultChange.format(subscriberDeltaWithoutBooster)}</td><td>{resultChange.format(result.delta)}</td></tr>
+          <tr><th scope="row">Просмотры</th><td>{resultNumber.format(viewsWithoutBooster)}</td><td>{resultNumber.format(result.views)}</td></tr>
+        </tbody>
+      </table> : <p className="small">{viral
         ? `Пост залетел. ${viralEffect}`
-        : `Карта защитила от отписок и дала прирост подписчиков. ${guardEffect}`}</p>
+        : `Карта защитила от отписок и дала прирост подписчиков. ${guardEffect}`}</p>}
       <p className="small muted">{remaining !== undefined
         ? `В запасе осталось ${resultNumber.format(remaining)}`
         : 'Остаток карт пока недоступен.'}</p>
