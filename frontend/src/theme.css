@@ -371,7 +371,6 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .unlock-celebration p { margin: 0 0 24px; }
 .unlock-celebration .btn { margin-top: 12px; }
 .unlock-celebration p.small { margin: 20px 0 0; }
-.result-share { display: block; margin: 14px auto 0; padding: 8px; border: 0; background: none; color: #C5A0FF; font: inherit; cursor: pointer; }
 @keyframes unlock-arrive { from { opacity: 0; transform: translateY(24px) scale(.95); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .unlock-celebration { animation: none; } }
 
@@ -594,7 +593,6 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .post-result .result-details { margin:12px 0; }
 .post-result .result-details .chip { margin-top:8px; background:#22222D; }
 .post-result-actions { display:grid; gap:8px; padding:7px 16px 0; }
-.post-result .result-share { min-height:44px; margin:0 auto; }
 
 /* Reposts use the current card and text-button styles. */
 .quoted-post { display: block; width: 100%; box-sizing: border-box; margin: 12px 0 0; padding: 12px; border: 1px solid var(--line, #343440); border-radius: 12px; background: transparent; color: inherit; text-align: left; font: inherit; overflow-wrap: anywhere; }

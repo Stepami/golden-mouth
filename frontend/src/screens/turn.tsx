@@ -23,7 +23,7 @@ import type { BoosterStock, CommentT, Post, PostResult } from '../api/types'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, Sheet, TopBar, EnergyBadge, Whisper, fmt, plural } from '../ui'
+import { Avatar, BottomCTA, Button, Comment, Ribbon, Sheet, TopBar, EnergyBadge, Whisper, fmt, plural } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { contentOf, optionalWorldTemplate, worldOf } from '../api/worldContent'
@@ -31,6 +31,7 @@ import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 import './postResult.css'
+import './share.css'
 import { hasDesktopPointer, submitOnDesktopEnter, TextField } from '../ui/TextField'
 import { completePostDraft, draftKey, hasPostDraft, readPostDraft, readReplyDraft, replyDraftKey, savePostDraft, saveReplyDraft, type PostDraft, type ReplyDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
@@ -136,7 +137,7 @@ export function Compose() {
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main={<span className="publish-button-label">Опубликовать<kbd aria-hidden="true" title="Enter в поле поста. Shift+Enter добавляет строку.">Enter</kbd></span>}
+      <BottomCTA main="Опубликовать" shortcut={<kbd className="publish-shortcut" title="Enter в поле поста. Shift+Enter добавляет строку.">↵ Enter</kbd>}
         hint={!guest && !repostId && profile && <NextStoryEditorHint player={profile} />} disabled={!text.trim()} onMain={publish} />
     </div>
   )
@@ -454,14 +455,10 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
                 {continuation && <p className="small muted world-reply-hint"><b>Как продолжить</b> {continuation}</p>}
               </section>
               <div className="post-result-tools">
-                {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
                 {(r.whys.length > 0 || awards.length > 0) && <details className="result-details"><summary>Разбор поста</summary>
                   <div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
                   <div className="result-awards">{awards.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
                 </details>}
-                {!guest && <button onClick={() => nav.push('02-7_share', { post })} className="result-share" aria-label="Поделиться" title="Поделиться">
-                  {boosted ? <span className="result-share-mark" aria-hidden="true">↗</span> : 'Поделиться'}
-                </button>}
               </div>
             </div>
           </div>
@@ -771,7 +768,10 @@ export function Thread() {
       <WorldContext world={player.world} />
       <div className="pad">
         {typeof nav.params.guestImportNotice === 'string' && <div className="card" role="status">{nav.params.guestImportNotice}</div>}
-        <div className="card" style={{ marginBottom: 12 }}>{shownPost.text}{!guest && <QuotedPost repostId={shownPost.repostId} />}{!guest && <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={shownPost.id} likes={shownPost.likes} likedBy={shownPost.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!shownPost.repostId && <RepostAction postId={shownPost.id} />}</div>{shownPost.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div>}</div>
+        <div className="card" style={{ marginBottom: 12 }}>{shownPost.text}{!guest && <QuotedPost repostId={shownPost.repostId} />}{!guest && <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={shownPost.id} likes={shownPost.likes} likedBy={shownPost.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!shownPost.repostId && <RepostAction postId={shownPost.id} />}</div>{shownPost.authorId === `Player_${player.id.replaceAll('-', '')}` && <div className="thread-own-post-actions">
+          <button type="button" className="text-button" onClick={() => nav.push('02-7_share', { post: shownPost })}>Поделиться</button>
+          <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>
+        </div>}</div>}</div>
         {showHelp && !onboarding && !directReply && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
         {(!showHelp || !!onboarding || directReply) && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => {
@@ -829,24 +829,33 @@ function Share() {
   // Публичную картинку 9:16 Telegram загружает без заголовков авторизации.
   const storyCardUrl = new URL(`${apiBaseUrl ?? ''}/cards/story/${encodeURIComponent(player.id)}/${encodeURIComponent(post.id)}.png`, location.origin).toString()
   const toStory = () => { if (!link) return; track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(storyCardUrl, { text, widgetLink: { url: link, name: 'Играть' } }) }
-  return (
-    <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Поделиться" />
-      <div className="pad">
-        <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420)', borderRadius: 14, padding: 14, marginBottom: 12 }}>
-          <div className="small" style={{ color: 'var(--gift)' }}>РЕКИ · МОЙ ПОСТ</div>
-          <div style={{ margin: '8px 0' }}>{post.text}</div>
-          <div className="small muted">👁 {fmt(post.views)}</div>
-          <div className="small" style={{ marginTop: 8 }}>а ты кем будешь в {contentOf(player.world).where}? <b>▶ Играть</b></div>
-        </div>
-        <Gift style={{ marginBottom: 12 }}>Позови друга в Реки</Gift>
-        <div className="small muted">Telegram откроет список твоих чатов. Мы его не видим и никому не пишем сами.</div>
-      </div>
-      {linkError && <div className="pad" role="alert">Не удалось получить твою ссылку.<Button secondary onClick={retry}>Попробовать снова</Button></div>}
-      {shareError && <p className="pad small" role="alert">{shareError}</p>}
-      <BottomCTA disabled={!link} secondDisabled={!link} second={inTelegram && shareStory.isAvailable() ? '＋ В сторис' : undefined} onSecond={toStory} main="Отправить в чат" onMain={() => void toChat()} />
+  const shareLabel = inTelegram || !navigator.share ? 'Отправить в Telegram' : 'Поделиться постом'
+  return <div className="screen no-tab share-screen">
+    <TopBar onBack={nav.back} title="Поделиться постом" />
+    <div className="pad share-content">
+      <article className="share-post-preview" aria-label="Превью поста">
+        <header className="share-post-author">
+          <Avatar seed={player.handle} world={player.world} avatarStyle={player.avatarStyle} size={40} />
+          <div><strong>{player.name}</strong><p className="small muted">{worldOf(player.world).title}</p></div>
+        </header>
+        <p className="share-post-text">{post.text}</p>
+        <p className="small muted">Просмотры {fmt(post.views)}</p>
+      </article>
+      <section className="share-controls" aria-label="Отправка поста">
+        {link ? <>
+          <p className="small muted">К посту добавится твоя ссылка-приглашение в игру.</p>
+          <div className="share-buttons">
+            <Button onClick={() => void toChat()}>{shareLabel}</Button>
+            {inTelegram && shareStory.isAvailable() && <Button secondary onClick={toStory}>В сторис</Button>}
+          </div>
+        </> : linkError ? <>
+          <p role="alert">Не удалось получить ссылку-приглашение.</p>
+          <Button secondary onClick={retry}>Попробовать снова</Button>
+        </> : <p className="small muted" role="status">Готовим ссылку-приглашение…</p>}
+        {shareError && <p className="small" role="alert">{shareError}</p>}
+      </section>
     </div>
-  )
+  </div>
 }
 
 register({
