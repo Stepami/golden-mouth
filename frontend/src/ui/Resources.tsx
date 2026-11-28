@@ -175,10 +175,12 @@ function CrystalShop({ playerId, wallet, stock }: { playerId: string; wallet: No
       <div className={`crystal-shop${showingStock ? ' booster-stock' : ''}`} ref={dialog} data-crystal-shop role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={handleKeys}>
         <div className="crystal-shop-head">
           <h2 id={titleId}>{showingStock ? 'Запас бустеров' : 'Магазин кристаллов'}</h2>
-          {!showingStock && <div className="crystal-shop-head-actions">
-            <button type="button" className="chip" disabled={!!busy} onClick={() => switchView('stock')}><span aria-hidden="true">✦ </span>Мои бустеры</button>
-            <output className="energy-badge" aria-label="Баланс кристаллов">💎 {wallet.crystals}</output>
-          </div>}
+          <div className="crystal-shop-head-actions">
+            {!showingStock && <output className="energy-badge" aria-label="Баланс кристаллов">💎 {wallet.crystals}</output>}
+            <button type="button" className="chip" disabled={!!busy} onClick={() => switchView(showingStock ? 'shop' : 'stock')}>
+              <span aria-hidden="true">{showingStock ? '💎 ' : '✦ '}</span>{showingStock ? 'В магазин' : 'Мои бустеры'}
+            </button>
+          </div>
         </div>
         {showingStock ? <section className="booster-inventory" aria-label="Карты">
           <ul className="booster-stock-list">
@@ -201,7 +203,6 @@ function CrystalShop({ playerId, wallet, stock }: { playerId: string; wallet: No
           </ul>
           <p className="small muted booster-stock-note">Подходящая карта срабатывает при публикации. При естественном залёте, репосте или цитате запас сохраняется.</p>
           {!stock && <p className="small muted">Остаток карт пока недоступен.</p>}
-          <Button secondary disabled={!!busy} onClick={() => switchView('shop')}>Открыть магазин</Button>
         </section> : <>
           <section className="crystal-shop-item">
             <h3><span aria-hidden="true">⚡</span> Энергия</h3>
