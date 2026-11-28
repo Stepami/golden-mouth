@@ -5,7 +5,7 @@ type Mention = { id: string; name: string; handle: string; avatarSeed: string }
 const mentionAtEnd = /(?:^|[^\p{L}\p{N}._%+@-])@([\p{L}\p{N}_.-]*)$/u
 
 export function hasDesktopPointer() {
-  return window.matchMedia('(any-pointer: fine)').matches
+  return window.matchMedia('(min-width: 621px) and (pointer: fine)').matches
 }
 
 export function submitOnDesktopEnter(event: KeyboardEvent<HTMLTextAreaElement>, submit?: () => void) {

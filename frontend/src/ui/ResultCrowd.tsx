@@ -16,7 +16,28 @@ const comparisonPlaces = [
   { name: 'Москвы', population: 13_010_112, year: 2021, source: 'https://rosstat.gov.ru/vpn/2020/Tom1_Chislennost_i_razmeshchenie_naseleniya' },
 ]
 
-const fractionLabel = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 })
+const fractionLabel = new Intl.NumberFormat('ru-RU', { maximumSignificantDigits: 2 })
+const placesKey = 'reki:publication-places'
+let placeHistory: Record<string, string> = {}
+try {
+  const saved = JSON.parse(localStorage.getItem(placesKey) ?? '{}')
+  if (saved && typeof saved === 'object' && !Array.isArray(saved)) placeHistory = saved
+} catch { /* Use the in-memory history when storage is unavailable. */ }
+
+function comparisonPlace(publication: string, delta: number) {
+  const candidates = comparisonPlaces.filter(place => place.population >= delta).slice(0, 3)
+  const saved = candidates.find(place => place.name === placeHistory[publication])
+  if (saved) return saved
+  const recent = Object.values(placeHistory).slice(-2)
+  const fresh = candidates.filter(place => !recent.includes(place.name))
+  const pool = fresh.length ? fresh : candidates
+  const place = pool[Math.floor(Math.random() * pool.length)]
+  if (place) {
+    placeHistory[publication] = place.name
+    try { localStorage.setItem(placesKey, JSON.stringify(placeHistory)) } catch { /* Keep the assignment for this session. */ }
+  }
+  return place
+}
 const pulsedPublications = new Set<string>()
 let cheerOffset = 0
 
@@ -25,6 +46,10 @@ export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }:
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [unavailable, setUnavailable] = useState(false)
+  const [place, setPlace] = useState<(typeof comparisonPlaces)[number]>()
+  useEffect(() => {
+    setPlace(delta > 0 ? comparisonPlace(publication, delta) : undefined)
+  }, [publication, delta])
 
   useEffect(() => {
     const target = canvas.current
@@ -65,9 +90,7 @@ export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }:
     }
   }, [delta, publication, world, avatarStyle, onPulse])
 
-  const magnitude = Math.abs(delta)
-  const place = delta > 0 ? comparisonPlaces.find(item => item.population >= magnitude) : undefined
-  const percent = place ? magnitude / place.population * 100 : 0
+  const percent = place ? delta / place.population * 100 : 0
   if (!delta || (unavailable && !place)) return null
   return <div className="post-result-crowd">
     {!unavailable && <canvas ref={canvas} aria-hidden="true" />}

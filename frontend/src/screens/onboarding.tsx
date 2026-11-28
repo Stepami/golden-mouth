@@ -8,13 +8,14 @@ import { displayHandle } from '../app/handle'
 import { usePresetGoal } from '../ui/StoryGoal'
 import { WorldContext } from '../ui/WorldContext'
 import { WorldCover } from '../ui/WorldCover'
+import { hasDesktopPointer } from '../ui/TextField'
 import approvedIntro from '../assets/intro-school-approved.png'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
 import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
 import { worldOf, contentOf, optionalWorldTemplate } from '../api/worldContent'
-import type { Player } from '../api/types'
+import type { Player, UsedBooster } from '../api/types'
 import { needsRegistration } from '../api/auth'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -152,7 +153,7 @@ function Under18() {
 }
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
-export function ChannelHead({ hideDaily = false }: { hideDaily?: boolean } = {}) {
+export function ChannelHead({ hideDaily = false, spentBooster }: { hideDaily?: boolean; spentBooster?: UsedBooster } = {}) {
   const guest = useGuestSession(); const profile = useStore()?.player; const nav = useNav()
   const p = guest?.player ?? profile!
   const w = guest?.world ?? worldOf(p.world)
@@ -161,7 +162,7 @@ export function ChannelHead({ hideDaily = false }: { hideDaily?: boolean } = {})
   return <>
     <div className="top channel-header">
       {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
-      {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
+      {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} spentBooster={spentBooster} />}
     </div>
     {!guest && !hideDaily && nav.current !== '02-2_live' && <DailyTasks inline={nav.current === '03-5_stage'} />}
   </>
@@ -191,10 +192,27 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
   const nav = useNav()
   const session = useGuestSession()
   const suggested = starter || prompt
+  const openEditor = useCallback(() => {
+    if (!guest) tap('first_post_open_editor')
+    nav.push('02-1_compose', { firstPostConfirmed })
+  }, [nav, guest, firstPostConfirmed])
+  const published = !!session?.published
+  useEffect(() => {
+    if (published) return
+    const openOnEnter = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' || event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 ||
+        event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !hasDesktopPointer() ||
+        event.target !== document.body || document.querySelector('[aria-modal="true"], dialog[open], .sheet-bg')) return
+      event.preventDefault()
+      openEditor()
+    }
+    document.addEventListener('keydown', openOnEnter)
+    return () => document.removeEventListener('keydown', openOnEnter)
+  }, [openEditor, published])
   if (session?.published) return <div className="screen channel-screen game-columns"><ChannelHead /><WorldContext world={p.world} /><div className="pad">
     <Card><p>{session.post.text}</p></Card>
   </div><BottomCTA main={guestSignupLabel} onMain={session.signUp} second="Посмотреть реакции" onSecond={() => nav.push('02-3_result')} /></div>
-  const openEditor = () => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }
+  const shortcut = <kbd className="enter-shortcut" title="Enter открывает редактор.">↵ Enter</kbd>
   if (custom) return <div className="screen first-story-screen game-columns">
     <ChannelHead hideDaily />
     <div className="pad">
@@ -202,14 +220,16 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
         <h1>Завязка</h1>
         {context && <p className="first-story-context">{context}</p>}
         {prompt && <p className="muted">{prompt}</p>}
-        <Button onClick={openEditor}>Написать первый пост</Button>
+        <div className="cta-with-shortcut"><Button onClick={openEditor}>Написать первый пост</Button>{shortcut}</div>
       </section>
     </div>
     <WorldContext world={p.world}><DailyTasks inline={nav.current === '03-5_stage'} /></WorldContext>
     <div className="pad"><Streak streak={p.streak} />{offer}</div>
   </div>
-  return <div className="screen first-story-screen game-columns"><ChannelHead hideDaily /><WorldContext world={p.world}>{!guest && <DailyTasks inline={nav.current === '03-5_stage'} />}</WorldContext><div className="pad">
-    {!suggested && <Streak streak={p.streak} />}
+  return <div className="screen first-story-screen game-columns"><ChannelHead hideDaily /><WorldContext world={p.world}>
+    {!suggested && <div className="first-story-streak"><Streak streak={p.streak} /></div>}
+    {!guest && <DailyTasks inline={nav.current === '03-5_stage'} />}
+  </WorldContext><div className="pad">
     {offer}
     <div className="card first-story">
       {worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}
@@ -218,7 +238,10 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
       <div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>
       {!suggested && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
     </div>{!suggested && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
-  </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={openEditor}>Написать первый пост</button></div></div>
+    <div className="bottom-cta first-story-action" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}
+      <div className="cta-with-shortcut"><button className="btn" onClick={openEditor}>Написать первый пост</button>{shortcut}</div>
+    </div>
+  </div></div>
 }
 
 register({
