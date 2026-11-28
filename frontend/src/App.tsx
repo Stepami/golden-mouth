@@ -109,7 +109,8 @@ function Shell() {
   }
   const trainingScreen = learning && !top.id.startsWith('06-') && !['01-1_invite', '01-2_age', '01-2b_under14', '05-8_settings'].includes(top.id)
   const tab = trainingScreen ? TAB_OF[top.id] ?? (onboarding?.phase === 'setup' ? 5 : 0) : top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
-  const wideTab = tab ?? (player && ['02-1_compose', '02-6_thread'].includes(top.id) ? 0 : undefined)
+  const settingsPage = ['05-8_settings', '06-4_rules'].includes(top.id)
+  const wideTab = tab ?? (player && settingsPage ? 4 : player && ['02-1_compose', '02-6_thread'].includes(top.id) ? 0 : undefined)
   return (
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>

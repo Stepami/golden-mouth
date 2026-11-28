@@ -367,7 +367,7 @@ function Settings() {
     catch { setError('Не получилось выйти. Попробуй ещё раз.') }
     finally { setLoggingOut(false) }
   }
-  const [panel, setPanel] = useState<'support' | 'data' | 'address' | null>(null)
+  const [panel, setPanel] = useState<'address' | null>(null)
   const [address, setAddress] = useState(p.address)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -385,30 +385,37 @@ function Settings() {
     finally { setSaving(false) }
   }
   return (
-    <div className="screen no-tab">
+    <div className="screen no-tab settings-screen">
       <TopBar onBack={nav.back} title="Настройки" />
-      <div className="pad">
+      <div className="pad settings-grid">
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
-          <PushNotifications key={p.id} playerId={p.id} />
+          <h2 className="settings-group-title">Мир и канал</h2>
           <div style={{ padding: '12px 0' }}><div>🌩 Градус драмы</div><div className="small muted" style={{ margin: '2px 0 8px' }}>Сколько хейта и скандалов в мире. Фильтр 14+ работает всегда</div>
             <Segmented value={drama} onChange={setD} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} /></div>
+          {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
-          <InstallApp entry="settings" />
-          {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
+          <h2 className="settings-group-title">Профиль</h2>
+          {row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
           <AvatarPersonalization enabled={personalizeAvatar} onChange={enabled => setAvatarPersonalization(p.id, enabled)} />
           <div className="row" style={{ marginBottom: 12 }}><Avatar seed={p.handle} size={48} /><span className="small muted">Выбор сохраняется на этом устройстве.</span></div>
-          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📋 Правила публикаций', '›', false, () => nav.push('06-4_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
+          </Card>
+        <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
+          <h2 className="settings-group-title">Приложение</h2>
+          <PushNotifications key={p.id} playerId={p.id} />
+          <InstallApp entry="settings" />
+          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📋 Правила публикаций', '›', false, () => nav.push('06-4_rules'))}{row('🔒 Мои данные и правила', 'Скоро', false)}{row('✉ Поддержка', 'Скоро', true)}
         </Card>
+        <section className="settings-account card"><h2 className="settings-group-title">Аккаунт</h2>
         <button onClick={logOut} disabled={loggingOut} className="card" style={{ width: '100%', textAlign: 'center', marginBottom: 12 }}>{loggingOut ? 'Выходим…' : 'Выйти'}</button>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>
         <div className="small muted" style={{ textAlign: 'center', marginTop: 8 }}>Удалим канал, переписку и коллекцию. Вернуть будет нельзя</div>
+        </section>
       </div>
       {error && !panel && <div className="pad small" role="alert">{error}</div>}
       {panel && <Sheet onClose={() => { if (!saving) setPanel(null) }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>{({ support: 'Поддержка', data: 'Мои данные и правила', address: 'Как к тебе обращаться' })[panel]}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>Как к тебе обращаться</div>
         {panel === 'address' && <><Segmented value={address} onChange={value => setAddress(value as typeof address)} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} /><Button disabled={saving} style={{ marginTop: 14, marginBottom: 8 }} onClick={async () => { if (saving) return; setSaving(true); setError(''); try { await api.settings({ address }); patch({ address }); setPanel(null) } catch { setError('Не получилось сохранить. Попробуй ещё раз.') } finally { setSaving(false) } }}>Сохранить</Button></>}
-        {(panel === 'support' || panel === 'data') && <p className="muted">Скоро будет. Готовим этот раздел.</p>}
         {error && <p className="small" role="alert">{error}</p>}
         <Button secondary disabled={saving} onClick={() => setPanel(null)}>Закрыть</Button>
       </Sheet>}

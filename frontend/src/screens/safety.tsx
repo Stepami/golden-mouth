@@ -42,7 +42,7 @@ function Crisis({ adult }: { adult: boolean }) {
 
 function PublicationRules() {
   const nav = useNav()
-  return <div className="screen no-tab"><TopBar onBack={nav.back} title="Правила публикаций" /><div className="pad">
+  return <div className="screen no-tab publication-rules"><TopBar onBack={nav.back} title="Правила публикаций" /><div className="pad">
     <h1>Твоя история — с уважением</h1><div className="publication-guidelines"><p>✨ Пиши о находках, чувствах и приключениях.</p><p>🤝 Спорь с идеями, береги людей.</p><p>🌿 Выбирай детали, подходящие твоему возрасту.</p></div><p className="small muted">Если тексту понадобится правка, подскажем. Черновик сохранится, энергия останется.</p>
     <Button onClick={nav.back}>Вернуться</Button>
   </div></div>
