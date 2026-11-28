@@ -125,5 +125,9 @@ type LandingAuthStep = [name: 'landing_login_click' | 'landing_auth_view' | 'lan
 export function trackLandingAuth(...[name, params]: LandingAuthStep) {
   const context = landingContext()
   if (!context || isLandingPreview()) return
-  reachMetrikaGoal(name, params)
+  if (name === 'landing_guest_start' || name === 'landing_guest_save_click') {
+    reachMetrikaGoal(name, { guest_funnel_action: name })
+  } else {
+    reachMetrikaGoal(name, params)
+  }
 }
