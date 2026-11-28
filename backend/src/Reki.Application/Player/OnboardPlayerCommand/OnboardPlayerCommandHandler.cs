@@ -82,13 +82,18 @@ internal sealed class OnboardPlayerCommandHandler(
                 return Unit.Value;
             },
             cancellationToken);
-        await sender.Send(new UpdateLastSeenAt(completed), cancellationToken);
+        var properties = new Dictionary<string, string>();
+        if (inviter is not null)
+        {
+            properties["id"] = inviter.Id.Value.ToString("N");
+        }
 
         analytics.TrackPlayer(
             completed,
             "player_created",
-            new Dictionary<string, string>(),
+            properties,
             referred: inviter is not null);
+        await sender.Send(new UpdateLastSeenAt(completed), cancellationToken);
         return completed;
     }
 
