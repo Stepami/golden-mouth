@@ -633,7 +633,7 @@ export function Thread() {
       const { postId: id, ...detail } = event.post
       setPost(current => ({ ...detail, id, likes: current?.likes ?? detail.likes, likedBy: current?.likedBy ?? detail.likedBy })); patch({ subs: event.subscribers, postsLeft: event.energyLeft })
       setDraft(fresh()); setTypingName(null)
-      try { localStorage.removeItem(storageKey) } catch { /* optional storage */ }
+      try { localStorage.removeItem(key) } catch { /* optional storage */ }
     } catch (cause) {
       if (ctrl.signal.aborted || activeKey.current !== key) return
       const status = (cause as { status?: number })?.status

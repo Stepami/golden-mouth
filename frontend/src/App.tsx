@@ -168,6 +168,7 @@ export function App() {
   useEffect(() => {
     if (!isGameOnboardingPreview() && (authenticated || registration) && !missingAccount) {
       setLandingAccepted(true)
+      if (authenticated) setSignup(false)
       if (!landingPreview && completeLandingAuth()) {
         if (pendingLandingWorld()) trackLanding('landing_auth_complete')
         trackLandingAuth('landing_auth_verified', { auth_outcome: registration ? 'registration' : 'access' })
