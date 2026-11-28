@@ -1861,6 +1861,20 @@ export interface BestCommentResponse {
     [key: string]: any;
 }
 
+export interface BoosterEffectResponse {
+    multiplier: number | null;
+    extraViews: number | null;
+
+    [key: string]: any;
+}
+
+export interface BoosterStockResponse {
+    viralCharges: number;
+    flopGuardCharges: number;
+
+    [key: string]: any;
+}
+
 export interface ChallengeResponse {
     id: string;
     me: string;
@@ -2146,6 +2160,7 @@ export interface PlayerResponse {
     dailyChallenge: DailyChallengeResponse;
     hitOwnWorldMilestone?: boolean;
     energyWallet?: EnergyWalletResponse | null;
+    boosterStock?: BoosterStockResponse | null;
 
     [key: string]: any;
 }
@@ -2201,6 +2216,7 @@ export interface PostResultResponse {
     bestComment: BestCommentResponse | null;
     virality: PostViralityStatus;
     views: number;
+    boosterEffect?: BoosterEffectResponse | null;
 
     [key: string]: any;
 }

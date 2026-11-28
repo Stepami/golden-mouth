@@ -46,7 +46,9 @@ internal sealed class PostProgressionCalculator(
             views,
             likes,
             starId,
-            turn);
+            turn,
+            result.Multiplier,
+            result.ViewsAdder);
     }
 
     private IReadOnlyDictionary<SkillId, SkillProgress> AddSkillExperience(

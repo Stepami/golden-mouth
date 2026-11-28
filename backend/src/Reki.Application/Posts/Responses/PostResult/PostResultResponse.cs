@@ -10,5 +10,6 @@ public sealed record PostResultResponse(
     IReadOnlyList<RibbonResponse> Ribbons,
     BestCommentResponse? BestComment,
     PostViralityStatus Virality,
-    long Views);
+    long Views,
+    BoosterEffectResponse? BoosterEffect = null);
 

@@ -11,4 +11,5 @@ public sealed record PlayerResponse(
     int BirthYear,
     DailyChallengeResponse DailyChallenge,
     bool HitOwnWorldMilestone = false,
-    EnergyWalletResponse? EnergyWallet = null);
+    EnergyWalletResponse? EnergyWallet = null,
+    BoosterStockResponse? BoosterStock = null);

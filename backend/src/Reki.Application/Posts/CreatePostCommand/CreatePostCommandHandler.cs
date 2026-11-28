@@ -140,7 +140,13 @@ internal sealed class CreatePostCommandHandler(
             RibbonResponse.Create(post.Virality),
             null,
             post.Virality,
-            post.Views);
+            post.Views,
+            post.Virality switch
+            {
+                PostViralityStatus.ViralCard => new BoosterEffectResponse(progression.Multiplier, null),
+                PostViralityStatus.FlopGuard => new BoosterEffectResponse(null, progression.ExtraViews),
+                _ => null,
+            });
 
         return new CreatePostResponse(
             post.MapPost(world, player.Id),
