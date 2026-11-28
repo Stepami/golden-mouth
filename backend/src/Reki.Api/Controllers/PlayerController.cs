@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Player;
 using Reki.Application.Player;
 using Reki.Application.Player.DeletePlayerCommand;
+using Reki.Application.Player.GetBoosterStock;
 using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.MergePlayersCommand;
 using Reki.Application.Player.RefreshDailyChallengeCommand;
@@ -34,7 +35,8 @@ public sealed class PlayerController(
         await sender.Send(new UpdateStreak(player), cancellationToken);
         await sender.Send(new RefreshDailyChallenge(player), cancellationToken);
         await sender.Send(new UpdateLastSeenAt(player), cancellationToken);
-        return TypedResults.Ok(player.ToPlayerResponse());
+        var stock = await sender.Send(new BoosterStockQuery(player.Id), cancellationToken);
+        return TypedResults.Ok(player.ToPlayerResponse() with { BoosterStock = stock });
     }
 
     [HttpGet("streak", Name = "GetPlayerStreak")]

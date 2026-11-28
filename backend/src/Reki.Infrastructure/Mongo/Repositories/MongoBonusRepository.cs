@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using Reki.Application.Player;
+using Reki.Application.Player.Responses;
 using Reki.Domain.Bonuses;
 using Reki.Domain.Player;
 using Reki.Infrastructure.Mongo.UnitOfWork;
@@ -11,6 +12,14 @@ internal sealed class MongoBonusRepository(
     MongoSessionProvider sessionProvider) : IBonusRepository
 {
     private readonly IMongoCollection<Bonus> _bonuses = database.GetCollection<Bonus>(MongoCollections.Bonuses);
+
+    public async Task<BoosterStockResponse> GetBoosterStockAsync(PlayerId id, CancellationToken ct)
+    {
+        var unclaimed = await _bonuses.Find(bonus => bonus.PlayerId == id && !bonus.IsClaimed).ToListAsync(ct);
+        return new BoosterStockResponse(
+            unclaimed.Count(bonus => bonus is ViralCardBonus),
+            unclaimed.Count(bonus => bonus is FlopGuardBonus));
+    }
 
     public async Task<TBonus?> TryClaimBonus<TBonus>(PlayerId id, CancellationToken ct)
         where TBonus : Bonus =>

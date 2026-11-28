@@ -140,7 +140,14 @@ internal sealed class CreatePostCommandHandler(
             RibbonResponse.Create(post.Virality),
             null,
             post.Virality,
-            post.Views);
+            post.Views,
+            progression.BoosterEffect is { } effect
+                ? new BoosterEffectResponse(
+                    effect.Multiplier,
+                    effect.ExtraViews,
+                    effect.SubscriberDeltaWithoutBooster,
+                    effect.ViewsWithoutBooster)
+                : null);
 
         return new CreatePostResponse(
             post.MapPost(world, player.Id),
