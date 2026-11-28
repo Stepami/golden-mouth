@@ -7,6 +7,7 @@ import { recordEntryStep } from '../app/landing/openobserve'
 import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
+import { WorldContext } from '../ui/WorldContext'
 import { StoryGoal, StoryGoalContent } from '../ui/StoryGoal'
 import { ResultCrowd } from '../ui/ResultCrowd'
 import { DailyTasks } from '../ui/DailyTasks'
@@ -113,11 +114,13 @@ export function Compose() {
     }
   }
   return (
-    <div className="screen no-tab">
+    <div className="screen no-tab game-columns compose-screen">
       <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />} />
-      <div className="pad">
+      <WorldContext world={p.world}>
         {!guest && <DailyTasks editor repost={!!repostId} />}
         {!repostId && (guest ? <StoryGoalContent goal={guest.goal} firstStep /> : <StoryGoal world={p.world} firstStep />)}
+      </WorldContext>
+      <div className="pad">
         {repostId && <QuotedPost repostId={repostId} />}
         <TextField label="Твой пост" value={text} mentions={mentions} onSubmit={publish} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
@@ -485,11 +488,11 @@ export function Thread() {
   useLayoutEffect(() => {
     const viewport = window.visualViewport
     const root = threadRoot.current
-    if (!directReply || !root || !viewport) return
+    if (!root || !viewport) return
     const positionReply = () => root.style.setProperty('--reply-keyboard-inset', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`)
     const revealTarget = () => {
       positionReply()
-      if (document.activeElement !== replyInput.current) return
+      if (!directReply || document.activeElement !== replyInput.current) return
       const target = document.getElementById(`reply-comment-${directReply}`)?.getBoundingClientRect()
       if (!target) return
       const visibleTop = viewport.offsetTop + 58
@@ -674,7 +677,7 @@ export function Thread() {
   shownPost.comments.filter(comment => !comment.parentCommentId).forEach(append)
   shownPost.comments.forEach(append)
   return (
-    <div ref={threadRoot} className="screen no-tab thread-screen">
+    <div ref={threadRoot} className="screen no-tab thread-screen game-columns">
       <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions">
         {guest ? <>
           <EnergyBadge value={player.postsLeft} />
@@ -682,6 +685,7 @@ export function Thread() {
         </> : store.player && <Resources player={store.player} />}
         {!guest?.replySubmitted && <button className="thread-exit" onClick={goBack}>{fromMarked ? 'К отметкам →' : fromFeed ? 'В ленту →' : 'В канал →'}</button>}
       </div>} />
+      <WorldContext world={player.world} />
       <div className="pad">
         {typeof nav.params.guestImportNotice === 'string' && <div className="card" role="status">{nav.params.guestImportNotice}</div>}
         <div className="card" style={{ marginBottom: 12 }}>{shownPost.text}{!guest && <QuotedPost repostId={shownPost.repostId} />}{!guest && <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={shownPost.id} likes={shownPost.likes} likedBy={shownPost.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!shownPost.repostId && <RepostAction postId={shownPost.id} />}</div>{shownPost.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div>}</div>

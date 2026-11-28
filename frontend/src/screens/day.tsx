@@ -25,6 +25,7 @@ import { SkillHelp } from '../ui/SkillHelp'
 import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
 import { beginOwnWorld } from '../app/worldDraft'
+import { WorldContext } from '../ui/WorldContext'
 import { ChannelHead, Home } from './onboarding'
 import { NextStoryChannelHint, NextStoryChannelOffer } from '../app/NextStory'
 import { nextStoryPostSaved } from '../app/GameOnboardingState'
@@ -239,24 +240,30 @@ function Stage() {
   const openingOwnWorld = firstPostConfirmed && !list.ready && !optionalWorldTemplate(worldOf(p.world))
   if (!list.error && (openingOwnWorld || list.ready && list.items.length === 0)) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home firstPostConfirmed={firstPostConfirmed || list.pending === null && !list.hasNext} /></div>
   return (
-    <div className="screen channel-screen post-list-screen" ref={gestures.screenRef}>
+    <div className="screen channel-screen post-list-screen game-columns" ref={gestures.screenRef}>
       {pullIndicator}
-      <ChannelHead firstPublishedPostId={firstPublishedPostId} />
-      <div className="pad">
-        <Streak streak={p.streak} />
-        {banner && p.subs >= 1000 && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
-          <button onClick={() => setBanner(false)} className="muted" style={{ position: 'absolute', right: 14, top: 10, background: 'none', border: 'none' }}>✕</button>
-          <span className="badge">НОВЫЙ ЭТАП · 1 000 ПОДПИСЧИКОВ</span>
-          <div style={{ fontSize: 18, fontWeight: 800, margin: '6px 0 4px' }}>👀 Взгляды</div>
-          <div className="small muted">Тебя заметили. Теперь фанаты и звёзды пишут честно: хвалят и критикуют по делу. Только про посты</div>
-        </Card>}
-        <Card style={{ marginBottom: 10 }}>
-          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><button className="text-button small" onClick={() => setSkillHelp(true)}>как поднять ›</button></div>
-          {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}
-        </Card>
-        <NextStoryChannelOffer player={p} />
-        {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
-        <Button secondary style={{ marginBottom: 10 }} onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Позвать друга</Button>
+      <ChannelHead hideDaily />
+      <WorldContext world={p.world}>
+        <DailyTasks inline firstPublishedPostId={firstPublishedPostId} />
+        <div className="channel-extras pad">
+          <Streak streak={p.streak} />
+          {banner && p.subs >= 1000 && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
+            <button onClick={() => setBanner(false)} className="muted" style={{ position: 'absolute', right: 14, top: 10, background: 'none', border: 'none' }}>✕</button>
+            <span className="badge">НОВЫЙ ЭТАП · 1 000 ПОДПИСЧИКОВ</span>
+            <div style={{ fontSize: 18, fontWeight: 800, margin: '6px 0 4px' }}>👀 Взгляды</div>
+            <div className="small muted">Тебя заметили. Теперь фанаты и звёзды пишут честно: хвалят и критикуют по делу. Только про посты</div>
+          </Card>}
+          <Card style={{ marginBottom: 10 }}>
+            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><button className="text-button small" onClick={() => setSkillHelp(true)}>как поднять ›</button></div>
+            {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}
+          </Card>
+          <NextStoryChannelOffer player={p} />
+          {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
+          <Button secondary style={{ marginBottom: 10 }} onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Позвать друга</Button>
+        </div>
+      </WorldContext>
+      <div className="pad channel-posts">
+        <h2>Мои публикации</h2>
         {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
         {list.error === 'first' && <Card><div className="small">Не получилось загрузить канал. Потяни вниз от начала списка, чтобы повторить.</div></Card>}
         {list.items.map(item => <FeedPostCard key={item.postId} item={item} returnTo="channel" onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item))} />)}
