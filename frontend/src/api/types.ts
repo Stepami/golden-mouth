@@ -16,8 +16,11 @@ export interface World {
 export type Star = Omit<Fields<Wire.StarResponse>, 'relation'>
 export type Skill = { [K in keyof Wire.SkillResponse]: number }
 export type CollectionCard = Wire.CollectionCardResponse
-export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skills' | 'streak' | 'ageBand'> & {
+export type BoosterStock = { viralCharges: number; flopGuardCharges: number }
+export type BoosterEffect = { multiplier?: number | null; extraViews?: number | null }
+export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skills' | 'streak' | 'ageBand' | 'boosterStock'> & {
   energy: number; skills: Record<SkillId, Skill>
+  boosterStock?: BoosterStock
   streak: { days: number; week: boolean[]; nextReward: string }
   ageBand?: import('../app/ageBand').AgeBand
 }
@@ -37,8 +40,9 @@ export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' |
 }
 export type Post = Omit<PostDetailResponse, 'postId'> & { id: string; inRivers?: boolean; at?: string }
 export type Why = Wire.WhyResponse
-export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment'> & {
+export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment' | 'boosterEffect'> & {
   delta: number; views: number
+  boosterEffect?: BoosterEffect
   ribbons: (Omit<Fields<Wire.RibbonResponse>, 'sub'> & { sub?: string })[]
   bestComment?: Wire.BestCommentResponse
 }

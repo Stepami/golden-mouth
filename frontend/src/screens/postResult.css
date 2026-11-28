@@ -2,6 +2,20 @@
   max-height: min(85dvh, calc(100dvh - 108px - env(safe-area-inset-top)));
 }
 
+.post-result-booster {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #554765;
+  border-radius: 12px;
+  background: #292335;
+}
+
+.post-result-booster > span { color: var(--lilac); }
+.post-result-booster p { margin: 4px 0 0; }
+
 @media (min-width: 621px) {
   .sheet-bg.post-result-backdrop {
     align-items: center;
