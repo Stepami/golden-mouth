@@ -520,6 +520,8 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .crystal-shop-pack span { display: block; color: var(--muted); }
 .booster-stock > .crystal-shop-item { grid-column: 1 / -1; }
 .booster-stock-list { gap: 12px; }
+.booster-stock-list > li + li, .booster-stock-note { border-top: 1px solid #3b3151; padding-top: 12px; }
+.booster-stock-note { margin-top: 5px; }
 .booster-stock-list li > div { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:3px; }
 .booster-stock-list li > div > b + b { color:var(--lilac); font-size:18px; font-variant-numeric:tabular-nums; }
 .crystal-shop-status { color: var(--soft); }
