@@ -8,8 +8,9 @@ import { displayHandle } from '../app/handle'
 import { usePresetGoal } from '../ui/StoryGoal'
 import { WorldContext } from '../ui/WorldContext'
 import { WorldCover } from '../ui/WorldCover'
+import { hasDesktopPointer } from '../ui/TextField'
 import approvedIntro from '../assets/intro-school-approved.png'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
 import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
@@ -191,10 +192,27 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
   const nav = useNav()
   const session = useGuestSession()
   const suggested = starter || prompt
+  const openEditor = useCallback(() => {
+    if (!guest) tap('first_post_open_editor')
+    nav.push('02-1_compose', { firstPostConfirmed })
+  }, [nav, guest, firstPostConfirmed])
+  const published = !!session?.published
+  useEffect(() => {
+    if (published) return
+    const openOnEnter = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' || event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 ||
+        event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !hasDesktopPointer() ||
+        event.target !== document.body || document.querySelector('[aria-modal="true"], dialog[open], .sheet-bg')) return
+      event.preventDefault()
+      openEditor()
+    }
+    document.addEventListener('keydown', openOnEnter)
+    return () => document.removeEventListener('keydown', openOnEnter)
+  }, [openEditor, published])
   if (session?.published) return <div className="screen channel-screen game-columns"><ChannelHead /><WorldContext world={p.world} /><div className="pad">
     <Card><p>{session.post.text}</p></Card>
   </div><BottomCTA main={guestSignupLabel} onMain={session.signUp} second="Посмотреть реакции" onSecond={() => nav.push('02-3_result')} /></div>
-  const openEditor = () => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }
+  const shortcut = <kbd className="enter-shortcut" title="Enter открывает редактор.">↵ Enter</kbd>
   if (custom) return <div className="screen first-story-screen game-columns">
     <ChannelHead hideDaily />
     <div className="pad">
@@ -202,7 +220,7 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
         <h1>Завязка</h1>
         {context && <p className="first-story-context">{context}</p>}
         {prompt && <p className="muted">{prompt}</p>}
-        <Button onClick={openEditor}>Написать первый пост</Button>
+        <div className="cta-with-shortcut"><Button onClick={openEditor}>Написать первый пост</Button>{shortcut}</div>
       </section>
     </div>
     <WorldContext world={p.world}><DailyTasks inline={nav.current === '03-5_stage'} /></WorldContext>
@@ -220,7 +238,9 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
       <div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>
       {!suggested && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
     </div>{!suggested && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
-    <div className="bottom-cta first-story-action" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={openEditor}>Написать первый пост</button></div>
+    <div className="bottom-cta first-story-action" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}
+      <div className="cta-with-shortcut"><button className="btn" onClick={openEditor}>Написать первый пост</button>{shortcut}</div>
+    </div>
   </div></div>
 }
 

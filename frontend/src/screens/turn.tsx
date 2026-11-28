@@ -137,7 +137,7 @@ export function Compose() {
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" shortcut={<kbd className="publish-shortcut" title="Enter в поле поста. Shift+Enter добавляет строку.">↵ Enter</kbd>}
+      <BottomCTA main="Опубликовать" shortcut={<kbd className="enter-shortcut" title="Enter в поле поста. Shift+Enter добавляет строку.">↵ Enter</kbd>}
         hint={!guest && !repostId && profile && <NextStoryEditorHint player={profile} />} disabled={!text.trim()} onMain={publish} />
     </div>
   )
@@ -436,8 +436,9 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
           <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>
           <div className="post-result-content">
+            {boosted && <div className="post-result-highlight"><ResultDelta key={post.id} delta={r.delta} /></div>}
             <div className="post-result-overview">
-              <ResultDelta key={post.id} delta={r.delta} />
+              {!boosted && <ResultDelta key={post.id} delta={r.delta} />}
               {boosted && <ResultBooster result={r} stock={boosterStock} />}
               {!boosted && crowd}
               {(!boosted || r.boosterEffect?.viewsWithoutBooster === undefined) && <dl className="post-result-stats small muted">
