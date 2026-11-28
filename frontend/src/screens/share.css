@@ -1,0 +1,36 @@
+.thread-own-post-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.thread-own-post-actions .text-button { min-height: 44px; font-size: 13px; }
+
+.share-content {
+  width: min(100%, 580px);
+  margin-inline: auto;
+  padding: 20px 16px;
+}
+.share-post-preview {
+  display: grid;
+  gap: 14px;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--line2);
+  border-top-color: #665187;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #241d35, var(--card) 62%);
+}
+.share-post-author { display: flex; align-items: center; gap: 10px; }
+.share-post-author strong { font-size: 16px; }
+.share-post-author p { margin-top: 2px; }
+.share-post-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.share-controls {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--card);
+}
+.share-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.share-controls .btn { width: auto; min-height: 44px; padding: 10px 16px; font-size: 14px; }
+@media (max-width: 620px) {
+  .share-buttons, .share-controls .btn { width: 100%; }
+}

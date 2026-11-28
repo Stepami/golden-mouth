@@ -34,10 +34,13 @@ export function Button({ children, secondary, onClick, disabled, style }: { chil
 }
 
 /** Кнопки внизу экрана: главная последней, вторичная над ней (как в макетах). */
-export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisabled, hint }: { main: ReactNode; onMain?: () => void; second?: ReactNode; onSecond?: () => void; disabled?: boolean; secondDisabled?: boolean; hint?: ReactNode }) {
+export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisabled, hint, shortcut }: { main: ReactNode; onMain?: () => void; second?: ReactNode; onSecond?: () => void; disabled?: boolean; secondDisabled?: boolean; hint?: ReactNode; shortcut?: ReactNode }) {
   // id кнопки для аналитики: main / second на текущем экране (экран добавит analytics.ts)
   const guestHint = useGuestSession()?.hint
-  return <div className="bottom-cta">{guestHint ?? hint}{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
+  const mainButton = <Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button>
+  return <div className="bottom-cta">{guestHint ?? hint}{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}
+    {shortcut ? <div className="cta-with-shortcut">{mainButton}{shortcut}</div> : mainButton}
+  </div>
 }
 
 export function TopBar({ title, onBack, right, rightPlain = false, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; rightPlain?: boolean; children?: ReactNode }) {

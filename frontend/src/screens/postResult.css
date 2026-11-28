@@ -85,11 +85,7 @@
   overflow: hidden;
 }
 .post-result--boosted .post-result-reaction .world-reply-hint { -webkit-line-clamp: 2; }
-.post-result--boosted .post-result-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding-bottom: 6px; }
 .post-result--boosted .post-result-tools .result-details { margin: 0; font-size: 13px; }
-.post-result--boosted .post-result-tools .result-details[open] { flex-basis: 100%; order: 1; }
-.post-result--boosted .post-result-tools .result-share { margin: 0 0 0 auto; min-width: 44px; }
-.result-share-mark { font-size: 20px; }
 
 @media (max-width: 620px) {
   .post-result-backdrop .post-result--boosted {
@@ -162,7 +158,6 @@
   .post-result--boosted .post-result-fact { font-size: 12px; }
   .post-result--boosted .post-result-reaction { padding-block: 8px; }
   .post-result--boosted .post-result-reaction > p { margin-top: 5px; font-size: 14px; -webkit-line-clamp: 2; }
-  .post-result--boosted .post-result-tools { gap: 4px 8px; }
 }
 
 @media (max-width: 620px) and (max-height: 600px) {
@@ -174,25 +169,14 @@
   .post-result--boosted .post-result-fact { padding-block: 4px; }
 }
 
-.publish-button-label { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
-.publish-button-label kbd {
-  display: none;
-  padding: 2px 7px;
-  border: 1px solid #ffffff6b;
-  border-radius: 6px;
-  background: #1a122b52;
-  color: inherit;
-  font: 600 12px/1.4 system-ui, sans-serif;
-}
+.publish-shortcut { display: none; }
 @media (any-pointer: fine) {
-  .publish-button-label kbd { display: inline-block; }
-}
-@media (min-width: 621px) {
-  .post-result--boosted .post-result-tools { justify-content: center; }
-  .post-result--boosted .post-result-tools .result-share {
-    display: inline-grid;
-    place-items: center;
-    padding: 0;
-    margin: 0;
+  .cta-with-shortcut { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+  .publish-shortcut {
+    display: block;
+    color: var(--text);
+    opacity: .58;
+    white-space: nowrap;
+    font: 600 14px/1 system-ui, sans-serif;
   }
 }
