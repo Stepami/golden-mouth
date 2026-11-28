@@ -19,6 +19,8 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         "event_answered",
         "hate_wave",
         "invite_converted",
+        "invite_link_copied",
+        "invite_opened",
         "invite_sent",
         "level_up",
         "limit_reached",
@@ -238,6 +240,12 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
             "landing_source", "landing_utm_campaign", "landing_utm_medium", "landing_utm_source", "landing_utm_content", "entry_post_id",
         })
         {
+            if (entry.Name == "landing_referral_open" &&
+                (key == "entry_post_id" || key.StartsWith("landing_utm_", StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
             if (entry.Properties.TryGetValue(key, out var value))
             {
                 attributes[key] = key is "visitor_id" or "entry_id" or "event_id" or "entry_post_id"
