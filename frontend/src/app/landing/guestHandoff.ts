@@ -1,4 +1,4 @@
-export type GuestDialogue = { starId: string; first: string; final: string }
+export type GuestDialogue = { starId: string; first: string; final?: string }
 export type GuestHandoff = {
   id?: string
   worldId: string

@@ -132,8 +132,8 @@ const hints: Record<Screen, [number, string]> = {
   '03-5_stage': [1, 'Открой редактор и напиши первый пост в своём канале.'],
   '02-1_compose': [1, 'Дополни готовую идею или напиши свою.'],
   '02-2_live': [2, 'Герои вот-вот увидят твой пост.'],
-  '02-3_result': [2, 'Открой комментарии и ответь герою.'],
-  '02-6_thread': [3, 'Напиши герою ответ, чтобы завершить обучение.'],
+  '02-3_result': [2, 'Зарегистрируйся, чтобы сохранить пост и ответить герою.'],
+  '02-6_thread': [3, 'Продолжишь разговор после регистрации.'],
 }
 
 function GuestHint({ screen, published, inline = true }: { screen: Screen; published?: boolean; inline?: boolean }) {
@@ -300,10 +300,11 @@ export function GuestOnboarding({ worldId, onSave }: {
   })
   const { screen, hero, published, replySubmitted, replyDone, collected } = draft
   const [storageAvailable, setStorageAvailable] = useState(true)
+  const [signupError, setSignupError] = useState(false)
   const selected = world.stars.find(star => star.id === hero)!
   const speaker = fixture.speakers.find(speaker => speaker.id !== hero)!
   const other = world.stars.find(star => star.id === speaker.id)!
-  const reply = draft.reply ?? fixture.replyIdea
+  const reply = draft.reply ?? (replySubmitted ? fixture.replyIdea : '')
   const text = draft.text ?? fixture.firstPostIdea
   const goal = fixture.intro
   const player: GuestPlayer = {
@@ -347,6 +348,7 @@ export function GuestOnboarding({ worldId, onSave }: {
   const guestAction = (action: string) => trackLandingAuth('landing_guest_action', {
     guest_action: action, guest_world: worldId, guest_hero: hero,
   })
+  const signUp = () => setSignupError(!onSave({ text, reply, hero, dialogue: { starId: other.id, first: speaker.first, final: replySubmitted ? speaker.second : undefined } }))
 
   function go(id: string, params?: Record<string, unknown>) {
     if (!Object.hasOwn(screens, id)) return
@@ -394,8 +396,11 @@ export function GuestOnboarding({ worldId, onSave }: {
     postIdea: fixture.firstPostIdea, text: draft.text,
     editPost: value => setDraft(current => ({ ...current, text: value })), reply, replySubmitted: !!replySubmitted, replyDone: !!replyDone,
     editReply: value => setDraft(current => ({ ...current, reply: value })),
-    sendReply: () => { guestAction('send_demo_reply'); setDraft(current => ({ ...current, reply, replySubmitted: true })) },
-    crystals: collected ? 2 : 0, hint: !replyDone ? <GuestHint screen={screen} published={published} /> : undefined,
+    signUp,
+    crystals: collected ? 2 : 0, hint: !replyDone ? <>
+      <GuestHint screen={screen} published={published} />
+      {signupError && <p className="small down" role="alert">Не получилось сохранить историю на этом устройстве. Проверь хранилище и попробуй ещё раз.</p>}
+    </> : undefined,
   }}>
     <main ref={game} className={`app game-shell game-with-rail guest-shell ${replyDone ? 'guest-finish' : 'guest-game'}`}>
       <nav className="game-wide-nav" aria-label="Навигация по демо">

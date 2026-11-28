@@ -1,5 +1,5 @@
-import { useGuestSession } from '../app/landing/guestSession'
-import { acceptedRegistrationConsent, readGuestHandoff } from '../app/landing/guestHandoff'
+import { guestSignupLabel, useGuestSession } from '../app/landing/guestSession'
+import { acceptedRegistrationConsent, readGuestHandoff, setRegistrationConsent } from '../app/landing/guestHandoff'
 import { landingContext, pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
 import { DailyTasks } from '../ui/DailyTasks'
@@ -76,6 +76,8 @@ function Age() {
   const wheel = useRef<HTMLDivElement>(null)
   const viewed = useRef(false)
   const fromLanding = nav.params.fromLanding === true
+  const signup = nav.params.signup === true
+  const cancelSignup = typeof nav.params.onCancelSignup === 'function' ? nav.params.onCancelSignup as () => void : undefined
   useEffect(() => {
     if (fromLanding && !viewed.current) {
       viewed.current = true
@@ -88,8 +90,12 @@ function Age() {
   const proceed = () => {
     track('onboarding_step', { step: 'age', ok: age >= 18 })
     if (age < 18) {
-      nav.replace('01-2b_under14', { year, agree, fromLanding, returnToCreation: nav.params.returnToCreation })
+      nav.replace('01-2b_under14', { year, agree, fromLanding, signup, onCancelSignup: cancelSignup, returnToCreation: nav.params.returnToCreation })
       return
+    }
+    if (signup && !preaccepted) {
+      setRegistrationConsent(true)
+      trackLandingAuth('landing_registration_consent')
     }
     if (fromLanding) trackLandingAuth('landing_age_continue')
     const draft = getWorldDraft()
@@ -97,11 +103,11 @@ function Age() {
     if (nav.params.returnToCreation) { nav.back(); return }
     const world = pendingLandingWorld()
     const handoff = readGuestHandoff()
-    if (preaccepted && needsRegistration() && world && handoff?.worldId === world && handoff.dialogue) {
+    if ((preaccepted || signup) && needsRegistration() && world && handoff?.worldId === world && handoff.dialogue) {
       nav.replace('guest_import', { birthYear: year })
       return
     }
-    nav.replace('01-2_age', { year, agree, fromLanding })
+    nav.replace('01-2_age', { year, agree, fromLanding, signup })
     nav.push(world ? '01-3b_world_overview' : '01-3_world', {
       ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age), birthYear: year,
     })
@@ -116,16 +122,18 @@ function Age() {
         <div ref={wheel} onScroll={onWheel} style={{ height: 230, overflowY: 'auto', scrollSnapType: 'y mandatory', background: '#14141B', borderRadius: 18, textAlign: 'center', padding: '96px 0' }}>
           {years.map(y => <div key={y} onClick={() => setYear(y)} style={{ scrollSnapAlign: 'center', height: 38, lineHeight: '38px', fontSize: y === year ? 22 : 18, fontWeight: y === year ? 800 : 400, color: y === year ? 'var(--text)' : 'var(--muted)', background: y === year ? '#22222D' : 'none', borderRadius: 10, margin: '0 12px' }}>{y}</div>)}
         </div>
-        {!preaccepted && <Card style={{ marginTop: 18 }}>
+        {!preaccepted && !signup && <Card style={{ marginTop: 18 }}>
           <b>Сохраним твою игру?</b>
           <label className="row" style={{ gap: 8, marginTop: 10 }}>
             <button onClick={() => { if (fromLanding) trackLandingAuth('landing_age_consent', { auth_outcome: agree ? 'unchecked' : 'checked' }); setAgree(!agree) }} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
             <span className="small">Согласие на обработку данных</span>
           </label>
         </Card>}
-        {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
+        {!signup && !agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={proceed} />
+      <BottomCTA main={signup ? 'Зарегистрироваться' : 'Дальше'} disabled={!signup && !agree} onMain={proceed}
+        hint={signup && <p className="small muted registration-notice">Нажимая «Зарегистрироваться», ты даёшь согласие на обработку данных.</p>} />
+      {signup && cancelSignup && <button className="text-button registration-back" type="button" onClick={cancelSignup}>Вернуться к посту</button>}
     </div>
   )
 }
@@ -138,7 +146,7 @@ function Under18() {
       <div style={{ fontSize: 64, margin: '40px 0 14px' }}>🌱</div>
       <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 10 }}>Игра доступна с 18 лет</div>
       <div className="muted">Играть в Реки можно с 18 лет. Если год рождения выбран по ошибке, его можно исправить.</div>
-      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree, fromLanding: nav.params.fromLanding, returnToCreation: nav.params.returnToCreation })} />
+      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree, fromLanding: nav.params.fromLanding, signup: nav.params.signup, onCancelSignup: nav.params.onCancelSignup, returnToCreation: nav.params.returnToCreation })} />
     </div>
   )
 }
@@ -185,7 +193,7 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
   const suggested = starter || prompt
   if (session?.published) return <div className="screen channel-screen game-columns"><ChannelHead /><WorldContext world={p.world} /><div className="pad">
     <Card><p>{session.post.text}</p></Card>
-  </div><BottomCTA main="Посмотреть реакции" onMain={() => nav.push('02-6_thread', { focusReply: true })} /></div>
+  </div><BottomCTA main={guestSignupLabel} onMain={session.signUp} second="Посмотреть реакции" onSecond={() => nav.push('02-3_result')} /></div>
   const openEditor = () => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }
   if (custom) return <div className="screen first-story-screen game-columns">
     <ChannelHead hideDaily />
