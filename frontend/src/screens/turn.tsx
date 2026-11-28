@@ -141,6 +141,11 @@ export function Compose() {
   )
 }
 
+const boosterTitles = {
+  viralCard: 'Сработала виральная карта',
+  flopGuard: 'Сработал флоп-гард',
+}
+
 // 02-2: живая реакция 3–4 с, потом итог одной карточкой
 export function Live() {
   const guest = useGuestSession(); const store = useStore()
@@ -150,6 +155,7 @@ export function Live() {
   const [views, setViews] = useState(0)
   const [typing, setTyping] = useState<string | null>(null)
   const [phase, setPhase] = useState<'generating' | 'reacting'>('generating')
+  const [usedBooster, setUsedBooster] = useState<keyof typeof boosterTitles>()
   useEffect(() => {
     if (guest) {
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -190,6 +196,8 @@ export function Live() {
       if (!active) return
       if (!latest) patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + created.result.delta) })
       setViews(created.post.views)
+      const { virality } = created.result
+      if (virality === 'viralCard' || virality === 'flopGuard') setUsedBooster(virality)
       setPhase('reacting')
       setFloats(created.post.likes > 0 ? [{ id: 0, emoji: '♡', x: 45 }] : [])
       const star = contentOf(p.world).stars.find(item => `Star_${item.id}` === created.predictedAuthorId)
@@ -232,6 +240,7 @@ export function Live() {
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
+        {usedBooster && <div className="live-booster small" role="status"><span aria-hidden="true">✦</span> {boosterTitles[usedBooster]}</div>}
         {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает...</div>}
       </div>
       <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'готовим пост' : 'Собираем итог…'}</div>
@@ -469,7 +478,7 @@ function ResultBooster({ result, stock }: { result: PostResult; stock?: BoosterS
   return <div className="post-result-booster">
     <span aria-hidden="true">✦</span>
     <div className="post-result-booster-body">
-      <strong>{viral ? 'Сработала виральная карта' : 'Сработал флоп-гард'}</strong>
+      <strong>{boosterTitles[viral ? 'viralCard' : 'flopGuard']}</strong>
       {hasComparison ? <table className="booster-comparison" aria-label="Результат этого поста без карты и с картой">
         <thead><tr><td></td><th scope="col">Без карты</th><th scope="col">С картой</th></tr></thead>
         <tbody>
