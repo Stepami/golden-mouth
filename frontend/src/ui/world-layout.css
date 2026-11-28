@@ -76,6 +76,15 @@
 .mood-setup .quick-summary { margin-top: 18px; }
 
 @media (min-width: 621px) {
+  .game-shell .first-story-screen .first-story-cover { display: none; }
+  .game-shell .first-story-screen .first-story:has(.first-story-cover) { padding-top: 20px; }
+  .game-shell .first-story-screen > .first-story-action {
+    position: static;
+    grid-area: 4 / 1;
+    width: auto;
+    padding: 14px 0 0;
+    background: none;
+  }
   .worlds-home .owned-stories + .btn { width: auto; padding-inline: 24px; }
   .game-shell .world-catalog .world-cover-copy .row {
     display: grid;

@@ -218,7 +218,7 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
       <div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>
       {!suggested && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
     </div>{!suggested && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
-  </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={openEditor}>Написать первый пост</button></div></div>
+  </div><div className="bottom-cta first-story-action" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={openEditor}>Написать первый пост</button></div></div>
 }
 
 register({

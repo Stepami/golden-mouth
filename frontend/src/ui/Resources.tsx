@@ -172,18 +172,26 @@ function CrystalShop({ playerId, wallet, stock }: { playerId: string; wallet: No
           <h2 id={titleId}>{showingStock ? 'Запас бустеров' : 'Магазин кристаллов'}</h2>
           {!showingStock && <output className="energy-badge" aria-label="Баланс кристаллов">💎 {wallet.crystals}</output>}
         </div>
-        {showingStock ? <section className="crystal-shop-item crystal-shop-booster">
-          <ul className="crystal-shop-pack booster-stock-list">
-            <li>
-              <div><b>Виральные карты</b>{stock && <b>{stock.viralCharges}</b>}</div>
-              <span>Срабатывают, если твой пост не залетел сам и не провалился. Дают залёт и усиливают результат.</span>
+        {showingStock ? <section className="booster-inventory" aria-label="Карты">
+          <ul className="booster-stock-list">
+            <li className="booster-card booster-card--viral">
+              <div className="booster-card-art" aria-hidden="true"><span>↗</span></div>
+              <div className="booster-card-copy">
+                <h3>Виральные карты</h3>
+                <p>Дают залёт обычному посту и усиливают его результат.</p>
+              </div>
+              {stock && <span className="booster-card-count" aria-label={`В запасе ${stock.viralCharges}`}>{stock.viralCharges}</span>}
             </li>
-            <li>
-              <div><b>Флоп-гарды</b>{stock && <b>{stock.flopGuardCharges}</b>}</div>
-              <span>Срабатывают при провале. Дают прирост подписчиков и дополнительные просмотры.</span>
+            <li className="booster-card booster-card--guard">
+              <div className="booster-card-art" aria-hidden="true"><span>✦</span></div>
+              <div className="booster-card-copy">
+                <h3>Флоп-гарды</h3>
+                <p>При провале дают прирост подписчиков и дополнительные просмотры.</p>
+              </div>
+              {stock && <span className="booster-card-count" aria-label={`В запасе ${stock.flopGuardCharges}`}>{stock.flopGuardCharges}</span>}
             </li>
           </ul>
-          <p className="small muted booster-stock-note">Карта применяется автоматически и списывается при публикации. При естественном залёте, репосте или цитате запас сохраняется.</p>
+          <p className="small muted booster-stock-note">Подходящая карта срабатывает при публикации. При естественном залёте, репосте или цитате запас сохраняется.</p>
           {!stock && <p className="small muted">Остаток карт пока недоступен.</p>}
           <Button secondary onClick={() => { dialog.current?.focus(); setView('shop') }}>Открыть магазин</Button>
         </section> : <>
