@@ -183,7 +183,7 @@ function CrystalShop({ playerId, wallet, stock }: { playerId: string; wallet: No
               <span>Срабатывают при провале. Дают прирост подписчиков и дополнительные просмотры.</span>
             </li>
           </ul>
-          <p className="small muted">Карта применяется автоматически и списывается при публикации. При естественном залёте, репосте или цитате запас сохраняется.</p>
+          <p className="small muted booster-stock-note">Карта применяется автоматически и списывается при публикации. При естественном залёте, репосте или цитате запас сохраняется.</p>
           {!stock && <p className="small muted">Остаток карт пока недоступен.</p>}
           <Button secondary onClick={() => { dialog.current?.focus(); setView('shop') }}>Открыть магазин</Button>
         </section> : <>
