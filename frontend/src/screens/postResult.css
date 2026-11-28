@@ -173,3 +173,26 @@
   .post-result--boosted .post-result-crowd { margin-top: 6px; }
   .post-result--boosted .post-result-fact { padding-block: 4px; }
 }
+
+.publish-button-label { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.publish-button-label kbd {
+  display: none;
+  padding: 2px 7px;
+  border: 1px solid #ffffff6b;
+  border-radius: 6px;
+  background: #1a122b52;
+  color: inherit;
+  font: 600 12px/1.4 system-ui, sans-serif;
+}
+@media (any-pointer: fine) {
+  .publish-button-label kbd { display: inline-block; }
+}
+@media (min-width: 621px) {
+  .post-result--boosted .post-result-tools { justify-content: center; }
+  .post-result--boosted .post-result-tools .result-share {
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    margin: 0;
+  }
+}
