@@ -28,7 +28,7 @@ export function Resources({ player, spentBooster }: { player: Player; spentBoost
 }
 
 const boosterCost = 6
-const packPurchased = 'Бустер-пак куплен. В запас добавлено по 3 карты каждого типа.'
+const packPurchased = 'Куплено. Добавили по 3 карты каждого типа.'
 type ShopAction = 'energy' | 'booster' | 'refresh'
 type ShopView = 'shop' | 'stock'
 type PurchaseRecovery = 'purchase-confirmed' | 'purchase-unknown'
@@ -189,7 +189,7 @@ function CrystalShop({ playerId, wallet, stock, spentBooster }: { playerId: stri
               <div className="booster-card-art" aria-hidden="true"><span>↗</span></div>
               <div className="booster-card-copy">
                 <h3>Виральные карты</h3>
-                <p>Дают залёт обычному посту и усиливают его результат.</p>
+                <p>Обычный пост залетит.</p>
               </div>
               {stock && <span className="booster-card-count" aria-label={`В запасе ${stock.viralCharges}`}>{stock.viralCharges}</span>}
             </li>
@@ -197,12 +197,12 @@ function CrystalShop({ playerId, wallet, stock, spentBooster }: { playerId: stri
               <div className="booster-card-art" aria-hidden="true"><span>✦</span></div>
               <div className="booster-card-copy">
                 <h3>Флоп-гарды</h3>
-                <p>При провале дают прирост подписчиков и дополнительные просмотры.</p>
+                <p>При провале дают прирост вместо отписок и больше просмотров.</p>
               </div>
               {stock && <span className="booster-card-count" aria-label={`В запасе ${stock.flopGuardCharges}`}>{stock.flopGuardCharges}</span>}
             </li>
           </ul>
-          <p className="small muted booster-stock-note">Подходящая карта срабатывает при публикации. При естественном залёте, репосте или цитате запас сохраняется.</p>
+          <p className="small muted booster-stock-note">Карты срабатывают сами. Репосты, цитаты и естественные залёты сохраняют запас.</p>
           {!stock && <p className="small muted">Остаток карт пока недоступен.</p>}
         </section> : <>
           <section className="crystal-shop-item">
@@ -214,11 +214,11 @@ function CrystalShop({ playerId, wallet, stock, spentBooster }: { playerId: stri
           <section className="crystal-shop-item crystal-shop-booster">
             <h3><span aria-hidden="true">✦</span> Бустер-пак</h3>
             <ul className="crystal-shop-pack">
-              <li><b>3 виральные карты</b><span>Дают залёт и усиливают результат, если пост не залетел сам и не провалился.</span></li>
-              <li><b>3 флоп-гарда</b><span>При провале дают прирост подписчиков и 5 дополнительных просмотров.</span></li>
+              <li><b>3 виральные карты</b><span>Обычный пост залетит.</span></li>
+              <li><b>3 флоп-гарда</b><span>Провал даст прирост вместо отписок и +5 просмотров.</span></li>
             </ul>
-            <p className="small muted">Карты добавляются в запас при каждой покупке и срабатывают автоматически на подходящих постах.</p>
-            {wallet.crystals < boosterCost && <p className="small muted">Не хватает кристаллов для покупки.</p>}
+            <p className="small muted">Подходящая карта спишется сама.</p>
+            {wallet.crystals < boosterCost && <p className="small muted">Не хватает кристаллов.</p>}
             <Button disabled={!!busy || !!notice?.refresh || wallet.crystals < boosterCost} onClick={buyBooster}>{busy === 'booster' ? 'Покупаем…' : `${buyLabel} ${boosterCost} 💎`}</Button>
           </section>
           {notice && <p className="crystal-shop-status small" role="status">{notice.text}</p>}
