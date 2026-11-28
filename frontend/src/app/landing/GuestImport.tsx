@@ -8,18 +8,19 @@ import { withPersona } from '../worldDraft'
 import { trackLanding } from '../analytics'
 import { completeLandingPost } from './experiment'
 import { recordEntryStep } from './openobserve'
-import { completeGuestOnboarding } from '../GameOnboardingState'
+import { saveGuestOnboarding } from '../GameOnboardingState'
+import { readReplyDraft, replyDraftKey, saveReplyDraft } from '../postDraft'
 import { rememberDailyTaskPost } from '../dailyTaskIntro'
 import { pendingReferral } from '../referral'
 import { acceptedRegistrationConsent, readGuestHandoff, saveGuestHandoff, type GuestHandoff } from './guestHandoff'
 
-type Imported = { player: Player; post: Post; notice?: string }
+type Imported = { player: Player; post: Post; notice?: string; replyCommentId?: string }
 class GuestImportError extends Error {}
 let activeImport: Promise<Imported> | undefined
 
 async function transferGuestStory(birthYear?: number): Promise<Imported> {
   const handoff = readGuestHandoff()
-  if (!handoff?.id || !handoff.hero || !handoff.dialogue || !handoff.text.trim() || !handoff.reply.trim()) {
+  if (!handoff?.id || !handoff.hero || !handoff.dialogue?.starId || !handoff.dialogue.first?.trim() || !handoff.text.trim()) {
     throw new GuestImportError('Не нашли гостевую историю на этом устройстве.')
   }
   const transferId = handoff.id
@@ -113,30 +114,41 @@ async function transferGuestStory(birthYear?: number): Promise<Imported> {
   const requestId = (step: string) => `${transferId}-${step}`
   const starCommentId = state.initialCommentId ?? await api.savePresetReply(postId, null, requestId('first'), dialogue.first, dialogue.starId)
   if (!state.initialCommentId) checkpoint({ initialCommentId: starCommentId })
-  const replyId = state.playerCommentId ?? await api.savePresetReply(postId, starCommentId, requestId('reply'), state.reply)
-  if (!state.playerCommentId) checkpoint({ playerCommentId: replyId })
-  const finalId = state.finalCommentId ?? await api.savePresetReply(postId, replyId, requestId('last'), dialogue.final, dialogue.starId)
-  if (!state.finalCommentId) checkpoint({ finalCommentId: finalId })
+  const commentIds = [starCommentId]
+  const final = state.reply.trim() ? dialogue.final : undefined
+  if (final) {
+    const replyId = state.playerCommentId ?? await api.savePresetReply(postId, starCommentId, requestId('reply'), state.reply)
+    if (!state.playerCommentId) checkpoint({ playerCommentId: replyId })
+    const finalId = state.finalCommentId ?? await api.savePresetReply(postId, replyId, requestId('last'), final, dialogue.starId)
+    if (!state.finalCommentId) checkpoint({ finalCommentId: finalId })
+    commentIds.push(replyId, finalId)
+  }
   const post = await api.post(postId)
-  if (!post || ![starCommentId, replyId, finalId].every(id => post.comments.some(comment => comment.id === id))) {
+  if (!post || !commentIds.every(id => post.comments.some(comment => comment.id === id))) {
     throw new GuestImportError('Пока не удалось открыть сохранённое обсуждение.')
   }
 
-  if (!state.claim) {
+  if (final && !state.claim) {
     checkpoint({ claim: 'pending' })
     const granted = await api.claimOnboardingBonus(postId, AbortSignal.timeout(15000)).catch(() => undefined)
     if (granted !== undefined) checkpoint({ claim: granted ? 'confirmed' : 'declined' })
   }
   const player = await loadPlayer()
-  if (!player.energyWallet) throw new GuestImportError('Пока не удалось загрузить баланс аккаунта.')
+  if (final && !player.energyWallet) throw new GuestImportError('Пока не удалось загрузить баланс аккаунта.')
+  if (!final && state.reply) {
+    const key = replyDraftKey(player, postId)
+    if (!readReplyDraft(key) && !saveReplyDraft(key, { requestId: requestId('reply'), commentId: starCommentId, text: state.reply, submitted: false })) {
+      throw new GuestImportError('Не получилось перенести черновик ответа. Проверь хранилище браузера и попробуй ещё раз.')
+    }
+  }
   const notice = state.claim === 'pending'
     ? 'Сервер не подтвердил награду. На экране показан текущий баланс аккаунта.'
     : state.claim === 'declined' ? 'Награда за этот пост недоступна. История сохранена.' : undefined
-  if (!completeGuestOnboarding(playerId, worldId, postId, state.claim === 'confirmed' ? 'confirmed' : state.claim === 'pending' ? 'uncertain' : undefined)) {
+  if (!saveGuestOnboarding(playerId, worldId, postId, !!final, state.claim === 'confirmed' ? 'confirmed' : state.claim === 'pending' ? 'uncertain' : undefined)) {
     throw new GuestImportError('Проверь хранилище браузера, чтобы завершить сохранение.')
   }
   if (!post.repostId) rememberDailyTaskPost(playerId, post.id, true)
-  return { player, post, notice }
+  return { player, post, notice, replyCommentId: final ? undefined : starCommentId }
 }
 
 function importGuestStory(birthYear?: number): Promise<Imported> {

@@ -3,6 +3,21 @@ export interface PostDraft { text: string; ownWords: boolean }
 const memory = new Map<string, PostDraft>()
 const prefix = 'reki:post-draft:v2:'
 export const draftKey = (player: { id: string; worldInstanceId?: string; world: string }) => `${prefix}${player.id}:${player.worldInstanceId ?? player.world}`
+export const replyDraftKey = (player: { id: string; worldInstanceId?: string; world: string }, postId?: string) =>
+  `reki:reply-draft:${player.id}:${player.worldInstanceId ?? player.world}:${postId ?? 'mock'}`
+export type ReplyDraft = { requestId: string; commentId: string | null; text: string; submitted: boolean; additionalStarId?: string }
+export function readReplyDraft(key: string): ReplyDraft | undefined {
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) ?? 'null') as ReplyDraft | null
+    if (saved && typeof saved.requestId === 'string' && saved.requestId.length > 0 && saved.requestId.length <= 64 &&
+      typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) {
+      return { ...saved, submitted: saved.submitted === true, additionalStarId: typeof saved.additionalStarId === 'string' ? saved.additionalStarId : undefined }
+    }
+  } catch { /* Optional storage. */ }
+}
+export function saveReplyDraft(key: string, draft: ReplyDraft) {
+  try { localStorage.setItem(key, JSON.stringify(draft)); return true } catch { return false }
+}
 export function readPostDraft(key: string): PostDraft {
   if (memory.has(key)) return { ...memory.get(key)! }
   try {
