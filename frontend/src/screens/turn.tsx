@@ -1,4 +1,4 @@
-import { useGuestSession } from '../app/landing/guestSession'
+import { guestSignupLabel, useGuestSession } from '../app/landing/guestSession'
 import { tap } from '../app/analytics'
 import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding, nextStoryPostSaved, isGameOnboardingPreview, isNextStoryPreview } from '../app/GameOnboardingState'
 import { rememberDailyTaskPost } from '../app/dailyTaskIntro'
@@ -31,7 +31,7 @@ import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 import './postResult.css'
 import { hasDesktopPointer, submitOnDesktopEnter, TextField } from '../ui/TextField'
-import { completePostDraft, draftKey, hasPostDraft, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft'
+import { completePostDraft, draftKey, hasPostDraft, readPostDraft, readReplyDraft, replyDraftKey, savePostDraft, saveReplyDraft, type PostDraft, type ReplyDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 import { heroHandle } from '../app/handle'
 
@@ -361,8 +361,10 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   const continuation = continuationHint(commentText, customWorld)
   const waitingForReply = !!customWorld && !comment && !commentFailed && !!commentPromise
   const openConversation = () => {
-    if (!guest) tap('post_open_conversation', { ok: !!comment })
-    const params = { post, commentPromise, focusReply: true, replyCommentId: customWorld ? comment?.id : undefined }
+    if (guest) { guest.signUp(); return }
+    tap('post_open_conversation', { ok: !!comment })
+    const replyCommentId = customWorld ? comment?.id : undefined
+    const params = { post, commentPromise, focusReply: !replyCommentId, replyCommentId }
     if (!params.replyCommentId) { nav.replace('02-6_thread', params); return }
     flushSync(() => nav.replace('02-6_thread', params))
     document.getElementById('thread-reply-input')?.focus({ preventScroll: true })
@@ -437,7 +439,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           <div className="post-result-actions">
             {guest?.hint}
             <span data-game-onboarding-post={comment ? post.id : undefined}><Button onClick={openConversation} disabled={waitingForReply}>
-              {waitingForReply ? 'Ждём ответ героя…' : commentText ? (speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
+              {guest ? guestSignupLabel : waitingForReply ? 'Ждём ответ героя…' : commentText ? (speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
             </Button></span>
             {!guest && !gameOnboardingActive(onboarding) && <Button secondary onClick={() => { tap('result_open_next_post'); nav.replace('02-1_compose') }}>Новый пост</Button>}
           </div>
@@ -466,22 +468,15 @@ export function Thread() {
   const world = guest ? undefined : worldOf(player.world)
   const customWorld = world && !optionalWorldTemplate(world) ? world : undefined
   const starIds = stars.map(star => star.id).join('\0')
-  const threadKey = `${player.id}:${player.worldInstanceId ?? player.world}:${postId ?? 'mock'}`
-  const storageKey = `reki:reply-draft:${threadKey}`
-  type Draft = { requestId: string; commentId: string | null; text: string; submitted: boolean; additionalStarId?: string }
-  const fresh = (commentId: string | null = null): Draft => ({ requestId: crypto.randomUUID(), commentId, text: '', submitted: false })
-  const readDraft = (): Draft => {
+  const threadKey = replyDraftKey(player, postId)
+  const fresh = (commentId: string | null = null): ReplyDraft => ({ requestId: crypto.randomUUID(), commentId, text: '', submitted: false })
+  const readDraft = (): ReplyDraft => {
     if (guest) return { requestId: 'guest-reply', commentId: publishedPost?.comments[0]?.id ?? null, text: guest.reply, submitted: guest.replySubmitted }
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as Draft | null
-      if (saved && typeof saved.requestId === 'string' && saved.requestId.length > 0 && saved.requestId.length <= 64 && typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) {
-        if (directReply && directReply !== saved.commentId) return { ...fresh(directReply), text: saved.text }
-        return { ...saved, submitted: saved.submitted === true, additionalStarId: typeof saved.additionalStarId === 'string' ? saved.additionalStarId : undefined }
-      }
-    } catch { /* Хранилище может быть недоступно. */ }
-    return fresh(directReply)
+    const saved = readReplyDraft(threadKey)
+    if (saved && directReply && directReply !== saved.commentId) return { ...fresh(directReply), text: saved.text }
+    return saved ?? fresh(directReply)
   }
-  const [draft, setDraft] = useState<Draft>(readDraft)
+  const [draft, setDraft] = useState<ReplyDraft>(readDraft)
   const [post, setPost] = useState<Post | null>(() => publishedPost ?? (postId ? null : firstPost))
   const [load, setLoad] = useState<'ready' | 'loading' | 'error' | 'unavailable'>(() => post ? 'ready' : 'loading')
   const [loadedKey, setLoadedKey] = useState(threadKey)
@@ -532,8 +527,8 @@ export function Thread() {
   }
   useEffect(() => {
     if (guest || loadedKey !== threadKey) return
-    try { localStorage.setItem(storageKey, JSON.stringify(draft)) } catch { /* optional storage */ }
-  }, [draft, loadedKey, threadKey, storageKey])
+    saveReplyDraft(threadKey, draft)
+  }, [draft, loadedKey, threadKey])
   useEffect(() => () => { controller.current?.abort() }, [threadKey])
   useEffect(() => {
     if (guest || !postId) return
@@ -573,12 +568,15 @@ export function Thread() {
   }, [commentPromise, load, threadKey])
   const initialReplyFocused = useRef('')
   useEffect(() => {
-    if (guest || directReply || !nav.params.focusReply || load !== 'ready' || !post || initialReplyFocused.current === threadKey) return
-    const target = post.comments.find(comment => comment.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId))
+    if (guest || !nav.params.focusReply || load !== 'ready' || !post || initialReplyFocused.current === threadKey) return
+    const target = post.comments.find(comment => (!directReply || comment.id === directReply) && comment.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId))
     if (!target) return
     initialReplyFocused.current = threadKey
-    setDraft(current => current.commentId || current.submitted ? current : { ...current, commentId: target.id, requestId: crypto.randomUUID() })
-    requestAnimationFrame(() => replyInput.current?.focus())
+    if (!directReply) setDraft(current => current.commentId || current.submitted ? current : { ...current, commentId: target.id, requestId: crypto.randomUUID() })
+    requestAnimationFrame(() => {
+      replyInput.current?.focus({ preventScroll: !!directReply })
+      if (directReply) document.getElementById(`reply-comment-${target.id}`)?.scrollIntoView({ block: 'center' })
+    })
   }, [post, load, threadKey, nav.params.focusReply, directReply])
   const postAuthor = stars.find(star => `Star_${star.id}` === post?.authorId)
   const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId)
@@ -590,7 +588,7 @@ export function Thread() {
   const targetAvailable = draft.commentId === null ? !!postAuthor : isStarComment(target)
   const recipient = draft.commentId === null ? postAuthor?.name : target?.author
   const sendDisabled = sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)
-  const edit = (change: Partial<Pick<Draft, 'text' | 'commentId'>>) => {
+  const edit = (change: Partial<Pick<ReplyDraft, 'text' | 'commentId'>>) => {
     setDraft(current => {
       const next = { ...current, ...change }
       return next.text === current.text && next.commentId === current.commentId
@@ -601,7 +599,7 @@ export function Thread() {
   }
   const send = async () => {
     if (!post || !targetAvailable || !draft.text.trim() || sending) return
-    if (guest) { guest.sendReply(); return }
+    if (guest) { guest.signUp(); return }
     const { patch } = store
     if (player.postsLeft < 1 && !draft.submitted) { setReplyError('Энергия закончилась. Новая появится в 9:00.'); return }
     const ctrl = new AbortController()
@@ -635,7 +633,7 @@ export function Thread() {
       const { postId: id, ...detail } = event.post
       setPost(current => ({ ...detail, id, likes: current?.likes ?? detail.likes, likedBy: current?.likedBy ?? detail.likedBy })); patch({ subs: event.subscribers, postsLeft: event.energyLeft })
       setDraft(fresh()); setTypingName(null)
-      try { localStorage.removeItem(storageKey) } catch { /* optional storage */ }
+      try { localStorage.removeItem(key) } catch { /* optional storage */ }
     } catch (cause) {
       if (ctrl.signal.aborted || activeKey.current !== key) return
       const status = (cause as { status?: number })?.status
@@ -731,7 +729,8 @@ export function Thread() {
       {!guest?.replySubmitted && <div className="bottom-cta thread-reply" data-game-onboarding-post={targetAvailable ? shownPost.id : undefined}>
         {guest?.hint}
         <div className="card thread-reply-field"><textarea ref={replyInput} id="thread-reply-input" className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} onKeyDown={event => submitOnDesktopEnter(event, sendDisabled ? undefined : send)} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
-        <button className="card thread-reply-send" onClick={send} disabled={sendDisabled} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
+        {guest ? <Button onClick={guest.signUp}>{guestSignupLabel}</Button> :
+          <button className="card thread-reply-send" onClick={send} disabled={sendDisabled} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>}
       </div>}
     </div>
   )

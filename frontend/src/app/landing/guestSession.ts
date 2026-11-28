@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react'
 import type { Player, Post, PostResult, WorldDefinition } from '../../api/types'
 
 export type GuestPlayer = Pick<Player, 'id' | 'world' | 'worldInstanceId' | 'name' | 'handle' | 'subs' | 'streak' | 'postsLeft' | 'ageBand' | 'energyWallet'>
+export const guestSignupLabel = 'Зарегистрироваться и ответить'
 
 interface GuestSession {
   world: WorldDefinition
@@ -18,7 +19,7 @@ interface GuestSession {
   replySubmitted: boolean
   replyDone: boolean
   editReply: (text: string) => void
-  sendReply: () => void
+  signUp: () => void
   crystals: number
   hint?: ReactNode
 }

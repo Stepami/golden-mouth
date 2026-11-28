@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
@@ -40,7 +40,7 @@ function hasExplicitStart(): boolean {
   return !!import.meta.env.DEV && (q.has('screen') || q.has('gallery'))
 }
 
-function Shell() {
+function Shell({ signup, onCancelSignup }: { signup: boolean; onCancelSignup?: () => void }) {
   const [stack, setStack] = useState<Entry[]>(() => [startEntry()])
   const top = stack[stack.length - 1]
   const { player, playerState, setPlayer } = useStore()
@@ -62,19 +62,21 @@ function Shell() {
 
   const importingGuest = top.id === 'guest_import'
   const Screen = SCREENS[top.id]?.component
-  const finishGuestImport = useCallback<React.ComponentProps<typeof GuestImport>['onDone']>(({ player, post, notice }) => {
+  const finishGuestImport = useCallback<React.ComponentProps<typeof GuestImport>['onDone']>(({ player, post, notice, replyCommentId }) => {
     setPlayer(player)
     clearLandingWorld()
     setRegistrationConsent(false)
-    nav.reset('02-6_thread', { post, guestImportNotice: notice })
+    nav.reset('02-6_thread', { post, guestImportNotice: notice, replyCommentId, focusReply: !!replyCommentId })
     clearGuestHandoff()
+    clearGuestDemo()
   }, [nav, setPlayer])
   const exitGuestImport = () => {
     clearLandingWorld()
     setRegistrationConsent(false)
     nav.reset('01-3_world')
   }
-  const resolvingExistingPlayer = (playerState === 'ready' || playerState === 'missing' && (api.hasPlayer() || !!pendingLandingWorld())) && !explicitStart && top.id === '01-1_invite'
+  const signupAge = signup && needsRegistration()
+  const resolvingExistingPlayer = (playerState === 'ready' || playerState === 'missing' && (api.hasPlayer() || !!pendingLandingWorld() || signupAge)) && !explicitStart && top.id === '01-1_invite'
   const visibleScreen = Screen && playerState !== 'loading' && playerState !== 'failed' && !resolvingExistingPlayer ? top.id : undefined
   useEffect(() => {
     if (visibleScreen) { setScreen(visibleScreen); screenView(visibleScreen) }
@@ -93,9 +95,9 @@ function Shell() {
       clearLandingWorld()
       setRegistrationConsent(false)
       setStack([{ id: '01-3_world', params: {} }])
-    } else if (world) setStack([{ id: api.hasPlayer() ? '01-3b_world_overview' : '01-2_age', params: { world, fromLanding: true, agree: acceptedRegistrationConsent() } }])
+    } else if (world || signupAge) setStack([{ id: api.hasPlayer() ? '01-3b_world_overview' : '01-2_age', params: { world, fromLanding: true, agree: acceptedRegistrationConsent(), signup: signupAge, onCancelSignup } }])
     else if (playerState === 'ready' || api.hasPlayer()) setStack([{ id: isNextStoryPreview() && playerState === 'ready' ? '03-5_stage' : '01-3_world', params: {} }])
-  }, [explicitStart, playerState, top.id])
+  }, [explicitStart, playerState, top.id, signupAge, onCancelSignup])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
 
@@ -146,32 +148,33 @@ export function App() {
     return !linkedWorld || linkedWorld === savedWorld ? savedWorld : undefined
   })
   const [signup, setSignup] = useState(() => !!readGuestHandoff() && !!pendingLandingWorld() && landingEntryPending())
-  const [consentChecked, setConsentChecked] = useState(false)
-  const [consentAccepted, setConsentAccepted] = useState(acceptedRegistrationConsent)
-  const missingAccount = registration && landingAuthPending() && !signup && !consentAccepted && !pendingLandingWorld()
-  const needsConsent = signup && !consentAccepted && !authenticated
+  const authAttempt = useRef(0)
+  const signupVisible = signup && !authenticated
+  const guestSignup = signupVisible && !!pendingLandingWorld()
+  const missingAccount = registration && landingAuthPending() && !signup && !acceptedRegistrationConsent() && !pendingLandingWorld()
   const showGuest = !explicitStart && ready && !authenticated && !registration && !resumable && !landingAccepted && !!guestWorld
   const showLanding = !showGuest && !explicitStart && (landingPreview || ready && !authenticated && !registration && !resumable && !landingAccepted)
-  const showAuth = !showLanding && !showGuest && !explicitStart && ready && !authenticated && !registration && !needsConsent
+  const showAuth = !showLanding && !showGuest && !explicitStart && ready && !authenticated && !registration
   useEffect(() => {
     if (showAuth && landingAuthPending()) trackLandingAuth('landing_auth_view')
   }, [showAuth])
   useEffect(() => {
-    if (needsConsent) trackLandingAuth('landing_registration_view')
-  }, [needsConsent])
+    if (signupVisible) trackLandingAuth('landing_registration_view')
+  }, [signupVisible])
   useEffect(() => {
     if (missingAccount) trackLandingAuth('landing_login_account_missing')
   }, [missingAccount])
   useEffect(() => { if (registration && !isGameOnboardingPreview()) beginGameOnboarding() }, [registration])
   useEffect(() => {
-    if (!isGameOnboardingPreview() && (authenticated || registration) && !missingAccount && !needsConsent) {
+    if (!isGameOnboardingPreview() && (authenticated || registration) && !missingAccount) {
       setLandingAccepted(true)
+      if (authenticated) setSignup(false)
       if (!landingPreview && completeLandingAuth()) {
         if (pendingLandingWorld()) trackLanding('landing_auth_complete')
         trackLandingAuth('landing_auth_verified', { auth_outcome: registration ? 'registration' : 'access' })
       }
     }
-  }, [authenticated, registration, landingPreview, missingAccount, needsConsent])
+  }, [authenticated, registration, landingPreview, missingAccount])
   useEffect(() => {
     if (explicitStart) return
     const provider = pendingAuthProvider()
@@ -182,10 +185,29 @@ export function App() {
     }).finally(() => setReady(true))
   }, [explicitStart])
   useEffect(() => { if (ready && !authenticated && api.hasPlayer()) api.clearSession() }, [ready, authenticated])
-  const finishLogin = (request: Promise<unknown>, provider?: AuthProvider, providerReturned = false) => {
+  const cancelSignup = useCallback(() => {
+    authAttempt.current++
+    clearPendingLogin()
+    clearLandingWorld()
+    completeLandingAuth()
+    setRegistrationConsent(false)
+    setAuthError(''); setSignup(false); setLandingAccepted(false)
+    window.scrollTo(0, 0)
+  }, [])
+  const loginExisting = () => {
+    authAttempt.current++
+    clearPendingLogin()
+    beginLandingAuth()
+    setRegistrationConsent(false)
+    setAuthError(''); setSignup(false)
+    trackLandingAuth('landing_login_click')
+  }
+  const attempt = authAttempt.current
+  const finishLogin = (request: () => Promise<unknown>, provider?: AuthProvider, providerReturned = false) => {
+    if (attempt !== authAttempt.current) return
     if (provider && providerReturned && landingAuthPending()) trackLandingAuth('landing_auth_provider_result', { auth_provider: provider, auth_outcome: 'proof' })
     setAuthError(''); setBusy(true)
-    void request.catch(() => {
+    void request().catch(() => {
       if (landingAuthPending()) trackLandingAuth('landing_auth_exchange_error', { auth_provider: provider })
       setAuthError(hasPendingLogin()
         ? 'Подтверждение входа сохранено. Проверь соединение с игрой и продолжи вход.'
@@ -193,11 +215,15 @@ export function App() {
     }).finally(() => setBusy(false))
   }
   if (showGuest && guestWorld) return <GuestOnboarding key={guestWorld} worldId={guestWorld} onSave={draft => {
-    if (!saveGuestHandoff({ ...draft, id: crypto.randomUUID(), worldId: guestWorld })) return false
-    setRegistrationConsent(false); setConsentAccepted(false); setConsentChecked(false)
+    const saved = readGuestHandoff()
+    const sameStory = saved?.id && saved.worldId === guestWorld && saved.hero === draft.hero && saved.text === draft.text
+      && saved.dialogue?.starId === draft.dialogue.starId && saved.dialogue.final === draft.dialogue.final
+    if (!saveGuestHandoff(sameStory ? { ...saved, reply: saved.playerId ? saved.reply : draft.reply } : { ...draft, id: crypto.randomUUID(), worldId: guestWorld })) return false
+    setRegistrationConsent(false)
     beginLandingAuth(guestWorld)
     trackLandingAuth('landing_guest_save_click')
-    setSignup(true); setLandingAccepted(true); clearGuestDemo()
+    setSignup(true); setLandingAccepted(true)
+    window.scrollTo(0, 0)
     return true
   }} />
   if (showLanding) return <Landing preview={landingPreview} onContinue={worldId => {
@@ -208,45 +234,30 @@ export function App() {
       setGuestWorld(worldId)
       return
     }
-    setRegistrationConsent(false); setConsentAccepted(false); setConsentChecked(false)
-    beginLandingAuth()
-    trackLandingAuth('landing_login_click')
+    loginExisting()
     setLandingAccepted(true)
   }} />
   if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
   if (missingAccount) return <TelegramLaunch error="">
     <p role="status">Аккаунт с этим способом входа не найден.</p>
-    <button className="btn" onClick={() => { const guest = readGuestHandoff(); if (guest) beginLandingAuth(guest.worldId); setSignup(true); setConsentChecked(false); setConsentAccepted(false); setRegistrationConsent(false) }}>Перейти к регистрации</button>
+    <button className="btn" onClick={() => { const guest = readGuestHandoff(); if (guest) beginLandingAuth(guest.worldId); setSignup(true); setRegistrationConsent(false) }}>Перейти к регистрации</button>
   </TelegramLaunch>
-  if (needsConsent) return <TelegramLaunch error="">
-    <h2>Создание аккаунта</h2>
-    <label className="registration-consent"><input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.currentTarget.checked)} />Согласие на обработку данных</label>
-    <button className="btn" disabled={!consentChecked} onClick={() => {
-      setRegistrationConsent(true); setConsentAccepted(true)
-      trackLandingAuth('landing_registration_consent')
-    }}>Продолжить регистрацию</button>
-    {!registration && <p className="registration-login">Уже есть аккаунт? <button type="button" className="text-button" onClick={() => {
-      beginLandingAuth()
-      setSignup(false); setConsentChecked(false); setConsentAccepted(false); setRegistrationConsent(false)
-      trackLandingAuth('landing_login_click')
-    }}>Войти</button></p>}
-  </TelegramLaunch>
-  if (showAuth) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'yandex' ? 'Яндекс ID' : pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
+  if (showAuth) return <TelegramLaunch error={authError} signup={guestSignup} pendingProvider={pendingLogin ? pendingAuthProvider() === 'yandex' ? 'Яндекс ID' : pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
     {resumable ? <div className="auth-providers">
       <button className="btn" disabled={busy} onClick={() => {
         const provider = pendingAuthProvider()
         if (landingAuthPending()) trackLandingAuth('landing_auth_resume', { auth_provider: provider, auth_action: 'manual' })
-        finishLogin(startAuth(), provider)
+        finishLogin(startAuth, provider)
       }}>{busy ? 'Входим…' : 'Продолжить вход'}</button>
       {pendingLogin && <button className="btn secondary" disabled={busy} onClick={() => {
         if (landingAuthPending()) trackLandingAuth('landing_auth_resume', { auth_provider: pendingAuthProvider(), auth_action: 'restart' })
         clearPendingLogin(); setAuthError('')
       }}>Войти заново</button>}
-    </div> : <AuthProviders busy={busy}
-      onMiniApp={hasInitData() ? () => finishLogin(loginMiniApp(), 'telegram') : undefined}
-      onTelegram={token => finishLogin(loginWidget(token), 'telegram', true)}
-      onVk={(token, expiry) => finishLogin(loginVk(token, expiry), 'vk', true)}
-      onYandex={(token, expiry) => finishLogin(loginYandex(token, expiry), 'yandex', true)}
+    </div> : <AuthProviders busy={busy} allowMiniAppLink={!guestSignup}
+      onMiniApp={hasInitData() ? () => finishLogin(() => loginMiniApp(), 'telegram') : undefined}
+      onTelegram={token => finishLogin(() => loginWidget(token), 'telegram', true)}
+      onVk={(token, expiry) => finishLogin(() => loginVk(token, expiry), 'vk', true)}
+      onYandex={(token, expiry) => finishLogin(() => loginYandex(token, expiry), 'yandex', true)}
       onSelected={(provider, action) => {
         if (landingAuthPending()) trackLandingAuth('landing_auth_provider_selected', { auth_provider: provider, auth_action: action })
       }}
@@ -254,6 +265,10 @@ export function App() {
         if (landingAuthPending()) trackLandingAuth('landing_auth_provider_result', { auth_provider: provider, auth_outcome: outcome })
         setBusy(false); setAuthError('Вход не завершён. Попробуй ещё раз.')
       }} />}
+    {signupVisible && <div className="registration-navigation">
+      <p>Уже есть аккаунт? <button type="button" className="text-button" disabled={busy} onClick={loginExisting}>Войти</button></p>
+      {guestSignup && guestWorld && <button type="button" className="text-button" disabled={busy} onClick={cancelSignup}>Вернуться к посту</button>}
+    </div>}
   </TelegramLaunch>
-  return <StoreProvider><Shell /></StoreProvider>
+  return <StoreProvider><Shell signup={signup} onCancelSignup={guestSignup && guestWorld ? cancelSignup : undefined} /></StoreProvider>
 }
