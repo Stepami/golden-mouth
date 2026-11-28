@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { api, ApiError } from '../api/client'
-import type { BoosterStock, Player } from '../api/types'
+import type { BoosterStock, Player, UsedBooster } from '../api/types'
 import { acknowledgeCrystalShopOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
 import { useStore } from '../app/store'
 import { Button, Sheet } from '.'
 
-export function Resources({ player }: { player: Player }) {
+export function Resources({ player, spentBooster }: { player: Player; spentBooster?: UsedBooster }) {
   const { refresh } = useStore()
   const [now, setNow] = useState(Date.now())
   const wallet = player.energyWallet
@@ -23,7 +23,7 @@ export function Resources({ player }: { player: Player }) {
   const seconds = next === null ? null : Math.max(0, Math.ceil((next - now) / 1000))
   return <div className="resources">
     <div className="energy-resource"><span className="energy-ring" style={{ background: `conic-gradient(var(--gift) ${Math.min(100, Math.max(0, player.postsLeft / (wallet?.cap ?? 10) * 100))}%, var(--line) 0)` }}><span aria-label={`Осталось ${player.postsLeft} энергии`}>⚡{player.postsLeft}</span></span>{seconds !== null && <span className="energy-timer" aria-label="До восстановления энергии">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span>}</div>
-    {wallet && <CrystalShop key={player.id} playerId={player.id} wallet={wallet} stock={player.boosterStock} />}
+    {wallet && <CrystalShop key={player.id} playerId={player.id} wallet={wallet} stock={player.boosterStock} spentBooster={spentBooster} />}
   </div>
 }
 
@@ -34,7 +34,7 @@ type ShopView = 'shop' | 'stock'
 type PurchaseRecovery = 'purchase-confirmed' | 'purchase-unknown'
 type ShopNotice = { text: string; refresh?: PurchaseRecovery }
 
-function CrystalShop({ playerId, wallet, stock }: { playerId: string; wallet: NonNullable<Player['energyWallet']>; stock?: BoosterStock }) {
+function CrystalShop({ playerId, wallet, stock, spentBooster }: { playerId: string; wallet: NonNullable<Player['energyWallet']>; stock?: BoosterStock; spentBooster?: UsedBooster }) {
   const { patch, refresh } = useStore()
   const learning = useGameOnboarding()?.crystalShopIntroPending === true
   const [view, setView] = useState<ShopView | null>(null)
@@ -167,9 +167,10 @@ function CrystalShop({ playerId, wallet, stock }: { playerId: string; wallet: No
       <span className="onboarding-crystal-icon" aria-hidden="true">💎</span>
       <span className="onboarding-crystal-balance" aria-hidden="true">{wallet.crystals}</span>
     </button>
-    <button type="button" className="energy-badge booster-button" onClick={event => openView('stock', event.currentTarget)}
+    <button type="button" className="energy-badge booster-button" data-spent-booster={spentBooster} onClick={event => openView('stock', event.currentTarget)}
       aria-label={total === undefined ? 'Открыть запас бустеров' : `Бустеры в запасе: ${total}. Открыть запас`} aria-haspopup="dialog">
       <span aria-hidden="true">✦{total !== undefined && ` ${total}`}</span>
+      {spentBooster && <span className="booster-spent" aria-hidden="true">−1</span>}
     </button>
     {open && createPortal(<Sheet onClose={close}>
       <div className={`crystal-shop${showingStock ? ' booster-stock' : ''}`} ref={dialog} data-crystal-shop role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={handleKeys}>

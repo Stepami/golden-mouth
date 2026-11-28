@@ -16,6 +16,7 @@ export interface World {
 export type Star = Omit<Fields<Wire.StarResponse>, 'relation'>
 export type Skill = { [K in keyof Wire.SkillResponse]: number }
 export type CollectionCard = Wire.CollectionCardResponse
+export type UsedBooster = Extract<Wire.PostViralityStatus, 'viralCard' | 'flopGuard'>
 export type BoosterStock = { viralCharges: number; flopGuardCharges: number }
 export type BoosterEffect = {
   multiplier?: number | null
