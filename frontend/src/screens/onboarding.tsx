@@ -208,8 +208,10 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
     <WorldContext world={p.world}><DailyTasks inline={nav.current === '03-5_stage'} /></WorldContext>
     <div className="pad"><Streak streak={p.streak} />{offer}</div>
   </div>
-  return <div className="screen first-story-screen game-columns"><ChannelHead hideDaily /><WorldContext world={p.world}>{!guest && <DailyTasks inline={nav.current === '03-5_stage'} />}</WorldContext><div className="pad">
-    {!suggested && <Streak streak={p.streak} />}
+  return <div className="screen first-story-screen game-columns"><ChannelHead hideDaily /><WorldContext world={p.world}>
+    {!suggested && <div className="first-story-streak"><Streak streak={p.streak} /></div>}
+    {!guest && <DailyTasks inline={nav.current === '03-5_stage'} />}
+  </WorldContext><div className="pad">
     {offer}
     <div className="card first-story">
       {worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}
@@ -218,7 +220,8 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
       <div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>
       {!suggested && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
     </div>{!suggested && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
-  </div><div className="bottom-cta first-story-action" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={openEditor}>Написать первый пост</button></div></div>
+    <div className="bottom-cta first-story-action" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={openEditor}>Написать первый пост</button></div>
+  </div></div>
 }
 
 register({
