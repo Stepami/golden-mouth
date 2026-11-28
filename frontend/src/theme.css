@@ -250,8 +250,6 @@ summary { cursor: pointer; padding: 6px 0; font-weight: 700; }
 .editor-list-row input { min-width: 0; flex: 1; padding: 10px; background: var(--bg); color: inherit; border: 1px solid var(--line2); border-radius: 10px; font-size: 16px; }
 .editor-list-row input:focus { outline: 2px solid var(--lilac); outline-offset: 2px; }
 .editor-rule { padding: 16px 0; border-bottom: 1px solid var(--line2); }
-.age-rule-note { padding: 16px; border: 1px solid var(--line2); border-radius: 14px; }
-.age-rule-note p { margin: 10px 0 0; font-size: 14px; line-height: 1.5; }
 .editor-preview, .hero-editor > summary { display: flex; align-items: center; gap: 12px; }
 .hero-editor > summary span span { display: block; margin-top: 4px; }
 .achievement-preview { padding: 14px; background: var(--card2); border-radius: 12px; }
@@ -915,8 +913,28 @@ body:has([data-crystal-shop]) .crystal-shop-intro { display: none; }
   .publication-rules h1 { font-size: clamp(24px, 3vw, 34px); line-height: 1.15; }
   .publication-rules .publication-guidelines { margin: 20px 0; gap: 12px; }
   .publication-rules .btn { width: auto; margin-top: 18px; padding-inline: 24px; }
-  body:has(.settings-screen) .sheet-bg { align-items: center; padding: 24px; }
+  .sheet-bg { align-items: center; padding: 24px; }
   body:has(.settings-screen) .sheet { width: min(100%, 510px); max-width: none; margin: 0; padding: 26px; }
   body:has(.settings-screen) .sheet .btn { width: auto; margin-right: 8px; padding-inline: 22px; }
   body:has(.settings-screen) .install-dialog h2[tabindex="-1"]:focus { outline: none; }
+}
+
+.link-profile-dialog {
+  box-sizing: border-box; inset: auto 0 0; width: min(430px, calc(100% - 24px));
+  max-height: calc(100dvh - 32px); margin: auto auto max(16px, env(safe-area-inset-bottom));
+  overflow: auto; padding: 24px; border: 1px solid var(--line2); border-radius: 22px;
+  background: var(--card); color: var(--text);
+}
+.link-profile-dialog[open] { display: grid; gap: 16px; }
+.link-profile-dialog::backdrop { background: rgba(8, 8, 12, .75); }
+.link-profile-dialog .text-button { justify-self: center; min-height: 44px; }
+.repost-options { margin-block: 14px; }
+@media (min-width: 621px) {
+  .link-profile-dialog { inset: 0; margin: auto; width: min(460px, calc(100% - 48px)); padding: 28px; }
+  .sheet-bg > .sheet { margin: 0; }
+  .sheet:has(.crystal-shop) { max-width: 740px; }
+  .crystal-shop { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .crystal-shop-head, .crystal-shop-close, .crystal-shop-status { grid-column: 1 / -1; }
+  .crystal-shop-item { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+  .crystal-shop-item .btn { margin-top: auto; }
 }

@@ -1,12 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { AuthProviders } from './AuthProviders'
 import { currentAuthProvider, getInitData, hasInitData, type AuthProvider } from '../api/auth'
 import { identifyOtherProfile, mergeProfile } from '../api/linkProfile'
-import { Button, Sheet } from '../ui'
+import { Button } from '../ui'
 import type { Player } from '../api/types'
 import type { PlayerResponse } from '../api/generated/reki-api'
 
 export function LinkProfile({ player, refresh, onClose }: { player: Player; refresh: () => Promise<unknown>; onClose: () => void }) {
+  const titleId = useId()
+  const dialog = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const node = dialog.current
+    node?.showModal()
+    return () => node?.close()
+  }, [])
   const [other, setOther] = useState<PlayerResponse | null>(null)
   const [provider, setProvider] = useState<AuthProvider | null>(null)
   const [merged, setMerged] = useState(false)
@@ -43,8 +50,14 @@ export function LinkProfile({ player, refresh, onClose }: { player: Player; refr
     } catch { /* The profiles are already merged; leave the refresh action available. */ }
     finally { pending.current = false; if (mounted.current) setBusy(false) }
   }
-  return <Sheet onClose={() => { if (!pending.current) onClose() }}>
-    <h2>🔑 Привязать профиль</h2>
+  return <dialog ref={dialog} className="link-profile-dialog" aria-labelledby={titleId}
+    onCancel={event => { event.preventDefault(); if (!pending.current) onClose() }}
+    onClick={event => {
+      if (event.target !== event.currentTarget || pending.current) return
+      const box = event.currentTarget.getBoundingClientRect()
+      if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) onClose()
+    }}>
+    <h2 id={titleId}>🔑 Привязать профиль</h2>
     {merged ? <>
       <p>Профиль привязан. Не получилось обновить данные игры — попробуй обновить ещё раз.</p>
       <Button disabled={busy} onClick={() => { setBusy(true); void refresh().then(updated => { if (updated) onClose() }).finally(() => setBusy(false)) }}>Обновить игру</Button>
@@ -62,5 +75,5 @@ export function LinkProfile({ player, refresh, onClose }: { player: Player; refr
     </>}
     {error && <p role="alert" style={{ color: 'var(--warn)' }}>{error}</p>}
     <button className="text-button" disabled={busy} onClick={onClose}>{merged ? 'Закрыть' : 'Отмена'}</button>
-  </Sheet>
+  </dialog>
 }

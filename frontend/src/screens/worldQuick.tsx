@@ -108,7 +108,7 @@ export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
   const choose = (star?: WorldDefinition['stars'][number]) => { tap('world_choose_character', { kind: star ? 'preset' : 'custom' }); setWorldDraft(withPersona(draft, star)) }
   const goal = presetGoalFor(d)
   const heroes = [...d.stars, ...(selected ? [selected.star] : [])].sort((a, b) => (draft.heroOrder?.indexOf(a.id) ?? 0) - (draft.heroOrder?.indexOf(b.id) ?? 0))
-  return <div className="screen no-tab"><TopBar title={nextStory ? 'Персонаж' : `Персонаж · ${d.templateId === null ? '2 / 3' : '1 / 2'}`} onBack={nav.back} /><div className="pad">{nextStory && <p className="small muted">{d.emoji} {d.title}</p>}<h1>Кем ты будешь в этой истории?</h1><p className="muted">Свой персонаж или герой мира — история будет идти от твоего лица.</p>
+  return <div className="screen no-tab story-setup persona-setup"><TopBar title={nextStory ? 'Персонаж' : `Персонаж · ${d.templateId === null ? '2 / 3' : '1 / 2'}`} onBack={nav.back} /><div className="pad">{nextStory && <p className="small muted">{d.emoji} {d.title}</p>}<h1>Кем ты будешь в этой истории?</h1><p className="muted">Свой персонаж или герой мира — история будет идти от твоего лица.</p>
 
     {heroes.length > 1 && heroes.filter(star => !nextStory || star.id !== nav.params.sourceStarId).map(star => <PersonaOption key={star.id} label={star.name} description={star.role} selected={selected?.star.id === star.id} onClick={() => choose(star)} portrait={<Avatar seed={star.avatarSeed} avatarStyle={d.avatarStyle} world={d.templateId ?? undefined} mode="default" />} />)}
     <PersonaOption label="Свой персонаж" description="Твоё имя, твоя роль в истории" selected={!selected} onClick={() => choose()} />
@@ -130,10 +130,10 @@ export function DifficultyPicker({ definition, info }: { definition: WorldDefini
   </section>
 }
 
-export function DramaPicker({ definition: d, beforeOptions, withDifficulty = true, fixed = false, info }: { definition: WorldDefinition; beforeOptions?: ReactNode; withDifficulty?: boolean; fixed?: boolean; info?: ReactNode }) {
+export function DramaPicker({ definition: d, withDifficulty = true, fixed = false, info }: { definition: WorldDefinition; withDifficulty?: boolean; fixed?: boolean; info?: ReactNode }) {
   return <>{withDifficulty && <DifficultyPicker definition={d} />}
     {info ? <div className="world-field-label world-drama-label"><h2>Градус драмы</h2>{info}</div> : <><h1>Сколько драмы добавим?</h1><p className="muted">{fixed ? 'В пробной истории доступно «Мягко». Остальные варианты откроются после входа.' : 'Выбери настроение истории. Его можно изменить позже.'}</p></>}
-    {beforeOptions}<div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} disabled={fixed && d.drama !== option.id} onClick={fixed ? undefined : () => { tap('world_choose_mood', { kind: option.id }); updateWorldDraft({ drama: option.id }) }} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b>{(!fixed || d.drama === option.id) && <p>{option.description}</p>}{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : fixed ? '🔒' : ''}</span></button>)}</div>
+    <div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} disabled={fixed && d.drama !== option.id} onClick={fixed ? undefined : () => { tap('world_choose_mood', { kind: option.id }); updateWorldDraft({ drama: option.id }) }} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b>{(!fixed || d.drama === option.id) && <p>{option.description}</p>}{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : fixed ? '🔒' : ''}</span></button>)}</div>
   </>
 }
 export function WorldPrototypePreview() {

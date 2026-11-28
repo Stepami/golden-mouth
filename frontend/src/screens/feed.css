@@ -1,0 +1,9 @@
+.feed-screen .feed-refresh { display: block; margin: 0 0 8px auto; }
+.feed-screen .text-button { min-height: 44px; }
+.feed-screen .card > p { margin-top: 6px; }
+
+@media (min-width: 621px) {
+  .game-shell .game-page:has(> .feed-screen) { --work: min(1080px, var(--available)); }
+  .game-shell .feed-screen { max-width: 700px; }
+  .game-shell .feed-screen > :is(.top, .pad) { padding-inline: 0; }
+}

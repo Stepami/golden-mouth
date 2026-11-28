@@ -11,10 +11,6 @@ import { DifficultyPicker, DramaPicker } from './worldQuick'
 import { heroTraits, WorldCardPreview, WorldEditorHelp, type WorldHelpTarget } from './worldEditorHelp'
 import { WorldCharacterPicker } from './worldCharacterPicker'
 
-export function AgeRuleNote({ teen = true }: { teen?: boolean }) {
-  return <div className="age-rule-note"><b>🔒 Ограничения контента</b><p>{teen ? 'Без взрослой сексуализированной подачи. Дружба и романтические симпатии допустимы.' : 'Чувствительные темы можно обсуждать без откровенных подробностей.'}</p><p className="small muted">Травля и откровенный контент запрещены для всех.</p></div>
-}
-
 function StringList({ title, help, values, maxLength = 2000, onChange, info }: {
   title: string; help: string; values: string[]; maxLength?: number; onChange: (values: string[]) => void; info?: (label: string, value?: string) => ReactNode
 }) {
@@ -267,7 +263,6 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
         <button className="chip" onClick={() => update({ achievements: [...d.achievements, { id: crypto.randomUUID(), emoji: '⭐', title: '', open: false }] })}>＋ Добавить достижение</button>
       </details>
     </>)}
-    {!ownWorld && <AgeRuleNote teen={draft.group !== '18+' || draft.ageBand === '14-17'} />}
     {error && <p className="down" role="alert">{error}</p>}
     {uncertain && <Button secondary onClick={onCheck}>Проверить список миров</Button>}
     <Button disabled={saving || uncertain} onClick={() => missing ? focusMissing(missing) : onSave()}>{saving ? 'Сохраняем…' : custom ? 'Выбрать персонажа' : draft.previewOnly ? 'Посмотреть демо' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'}</Button>

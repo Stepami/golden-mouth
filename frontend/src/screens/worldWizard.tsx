@@ -30,14 +30,14 @@ import { displayHandle, heroHandle } from '../app/handle'
 function SavedWorldCard({ world, player, duplicate, opening, onOpen }: { world: WorldDocument; player?: Player; duplicate?: number; opening: string | null; onOpen: () => void }) {
   const cover = optionalWorldTemplate(world)?.id ?? world.id
   return <button data-game-onboarding-world={world.id} className={`world-resume card${player ? ' world-resume-current' : ''}`} disabled={opening !== null} onClick={onOpen}>
-    {player && worldArt[cover] && <WorldCover world={cover} catalog className="world-resume-cover" />}
-    <Avatar seed={world.avatar} avatarStyle={world.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={42} />
+    {worldArt[cover] && <WorldCover world={cover} catalog className="world-resume-cover" />}
+    <div className="world-resume-body"><Avatar seed={world.avatar} avatarStyle={world.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={42} />
     <div>
       <div className="world-resume-heading"><b>{world.emoji} {world.title}</b>{player && <span className="world-resume-label">Текущая</span>}</div>
       <p className="small muted">{[world.name, world.role].filter(Boolean).join(' · ')}</p>
       <p className="small muted">{fmt(world.subscribers)} {plural(world.subscribers, 'подписчик', 'подписчика', 'подписчиков')}{duplicate ? ` · История ${duplicate}` : ''}</p>
       <span className="world-resume-action">{opening === world.id ? 'Открываем…' : 'Продолжить'}</span>
-    </div>
+    </div></div>
   </button>
 }
 
@@ -262,8 +262,9 @@ export function QuickMoodSetup({ draft, saving = false, disabled = false, fixed 
 }) {
   const nav = useNav(); const d = draft.definition
   const nextStory = !fixed && nav.params.nextStory === true
-  return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad">
-    <DramaPicker definition={d} fixed={fixed} withDifficulty={!fixed} beforeOptions={!fixed && !nextStory && <div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>} />
+  return <div className="screen no-tab story-setup mood-setup"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad">
+    <DramaPicker definition={d} fixed={fixed} withDifficulty={!fixed} />
+    {!fixed && !nextStory && <div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>}
     <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={fixed ? undefined : { address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
     {children}
   </div><BottomCTA main={action} hint={nextStory && <NextStoryProgress step={2}>Выбери, как быстро расти и насколько горячими будут споры.</NextStoryProgress>} disabled={saving || disabled || (!fixed && ((!draft.customEditing && !d.voice.trim()) || d.stars.length === 0))} onMain={onStart} /></div>
