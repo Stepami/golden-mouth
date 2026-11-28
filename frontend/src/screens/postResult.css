@@ -181,7 +181,7 @@
 }
 
 .enter-shortcut { display: none; }
-@media (any-pointer: fine) {
+@media (min-width: 621px) and (pointer: fine) {
   .cta-with-shortcut { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; }
   .enter-shortcut {
     display: block;
