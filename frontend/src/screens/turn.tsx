@@ -19,7 +19,7 @@ import { flushSync } from 'react-dom'
 import { shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
 import { firstPost, results } from '../api/mock'
-import type { BoosterStock, CommentT, Post, PostResult } from '../api/types'
+import type { BoosterStock, CommentT, Post, PostResult, UsedBooster } from '../api/types'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
@@ -157,7 +157,7 @@ export function Live() {
   const [views, setViews] = useState(0)
   const [typing, setTyping] = useState<string | null>(null)
   const [phase, setPhase] = useState<'generating' | 'reacting'>('generating')
-  const [usedBooster, setUsedBooster] = useState<keyof typeof boosterTitles>()
+  const [usedBooster, setUsedBooster] = useState<UsedBooster>()
   useEffect(() => {
     if (guest) {
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -230,7 +230,7 @@ export function Live() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="screen">
-      <ChannelHead />
+      <ChannelHead spentBooster={usedBooster} />
 
       <div className="pad" style={{ position: 'relative' }}>
         <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>

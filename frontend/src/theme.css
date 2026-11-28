@@ -505,8 +505,41 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .energy-ring > span { display:grid; place-items:center; width:100%; height:100%; border-radius:50%; background:var(--card2); font-size:12px; }
 .energy-timer { font-size:10px; color:var(--muted2); line-height:1; }
 .crystal-button { border:0; cursor:pointer; }
-.booster-button { min-width:44px; min-height:44px; padding:0 8px; border:1px solid #554765; background:#211b2e; color:var(--lilac); font-weight:700; font-variant-numeric:tabular-nums; cursor:pointer; }
+.booster-button { position:relative; min-width:44px; min-height:44px; padding:0 8px; border:1px solid #554765; background:#211b2e; color:var(--lilac); font-weight:700; font-variant-numeric:tabular-nums; cursor:pointer; }
 .booster-button:focus-visible { outline:2px solid var(--lilac); outline-offset:2px; }
+.booster-button[data-spent-booster] {
+  --spent-color: #cda9ff;
+  color: var(--spent-color);
+  border-color: var(--spent-color);
+  background: #302244;
+}
+.booster-button[data-spent-booster="flopGuard"] { --spent-color: #8ee6d3; background: #1a3538; }
+.booster-spent {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: -5px;
+  padding: 2px 5px;
+  border-radius: 8px;
+  background: var(--spent-color);
+  color: #201831;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .booster-button[data-spent-booster] { animation: booster-stock-pulse 1050ms ease-out; }
+  .booster-spent { animation: booster-stock-deduction 1050ms ease-out both; }
+  @keyframes booster-stock-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    24% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--spent-color) 40%, transparent); }
+  }
+  @keyframes booster-stock-deduction {
+    from { opacity: 0; transform: translateY(3px) scale(.8); }
+    20%, 65% { opacity: 1; transform: translateY(-7px) scale(1); }
+    to { opacity: 0; transform: translateY(-15px); }
+  }
+}
 .crystal-shop { display: grid; gap: 10px; }
 .crystal-shop:focus { outline: none; }
 .crystal-shop-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }

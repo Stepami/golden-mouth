@@ -15,7 +15,7 @@ import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
 import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
 import { worldOf, contentOf, optionalWorldTemplate } from '../api/worldContent'
-import type { Player } from '../api/types'
+import type { Player, UsedBooster } from '../api/types'
 import { needsRegistration } from '../api/auth'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -153,7 +153,7 @@ function Under18() {
 }
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
-export function ChannelHead({ hideDaily = false }: { hideDaily?: boolean } = {}) {
+export function ChannelHead({ hideDaily = false, spentBooster }: { hideDaily?: boolean; spentBooster?: UsedBooster } = {}) {
   const guest = useGuestSession(); const profile = useStore()?.player; const nav = useNav()
   const p = guest?.player ?? profile!
   const w = guest?.world ?? worldOf(p.world)
@@ -162,7 +162,7 @@ export function ChannelHead({ hideDaily = false }: { hideDaily?: boolean } = {})
   return <>
     <div className="top channel-header">
       {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
-      {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
+      {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} spentBooster={spentBooster} />}
     </div>
     {!guest && !hideDaily && nav.current !== '02-2_live' && <DailyTasks inline={nav.current === '03-5_stage'} />}
   </>
