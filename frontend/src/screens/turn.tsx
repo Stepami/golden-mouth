@@ -603,8 +603,9 @@ export function Thread() {
   const send = async () => {
     if (!post || !targetAvailable || !draft.text.trim() || sending) return
     if (guest) { guest.signUp(); return }
-    const { patch, refresh } = store
-    const dailyTasks = dailyTaskBaseline(player).tasks
+    const { player: livePlayer, patch, refresh } = store
+    if (!livePlayer) return
+    const dailyTasks = dailyTaskBaseline(livePlayer).tasks
     const commentsPending = dailyTasks.some(task => task.type === 'comments' && !task.done)
     const starTask = dailyTasks.find(task => task.type === 'starComment' && !task.done)
     let starSaved = false
