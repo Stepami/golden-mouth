@@ -1,0 +1,224 @@
+.story-entry {
+  * {
+    box-sizing:border-box;
+  }
+  & {
+    margin:0;
+    background:#100f15;
+    color:#f6f2fa;
+    font:16px/1.45 system-ui,sans-serif;
+  }
+  header,.story-wrap {
+    width:min(1160px,calc(100% - 56px));
+    margin:0 auto;
+  }
+  header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:21px 0;
+  }
+  .brand {
+    font-weight:800;
+    font-size:24px;
+    letter-spacing:-1px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .brand img {
+    width:34px;
+    border-radius:9px;
+  }
+  .hero {
+    display:grid;
+    grid-template-columns:1.03fr 1fr;
+    gap:6%;
+    align-items:center;
+    padding:12px 0 40px;
+  }
+  .cover {
+    display:block;
+    width:100%;
+    height:min(70vh,650px);
+    object-fit:cover;
+    object-position:center 28%;
+    border-radius:22px;
+  }
+  .world {
+    color:#c3a4df;
+    font-weight:650;
+  }
+  h1 {
+    font-size:clamp(48px,5.5vw,80px);
+    letter-spacing:-.067em;
+    line-height:1.01;
+    margin:16px 0 23px;
+  }
+  p {
+    max-width:440px;
+    color:#cbc5d2;
+    font-size:21px;
+  }
+  .cta {
+    border:0;
+    border-radius:15px;
+    padding:16px 26px;
+    font:700 18px system-ui;
+    color:#201427;
+    cursor:pointer;
+  }
+  .sub {
+    display:block;
+    margin:9px 0 19px;
+    color:#afa8b7;
+    font-size:14px;
+  }
+  @media(max-width:700px) {
+    header,.story-wrap {
+      width:calc(100% - 32px);
+    }
+    header {
+      padding:10px 0;
+    }
+    .hero {
+      display:block;
+      padding-top:5px;
+    }
+    .cover {
+      height:31svh;
+      min-height:180px;
+      max-height:330px;
+      object-position:center 24%;
+      margin-bottom:16px;
+    }
+    .world {
+      font-size:14px;
+    }
+    h1 {
+      font-size:42px;
+      margin:7px 0 12px;
+    }
+    p {
+      font-size:17px;
+      margin:10px 0 16px;
+    }
+    .cta {
+      width:100%;
+    }
+    .sub {
+      margin-bottom:10px;
+    }
+  }
+  & {
+    min-height:100svh;
+    display:flex;
+    flex-direction:column;
+  }
+  .features {
+    margin-top:auto;
+    overflow:hidden;
+    border-block:1px solid #393040;
+    background:#19151f;
+    color:#e3d6ed;
+    padding:14px 0;
+    font-size:15px;
+  }
+  .track,.items {
+    display:flex;
+    width:max-content;
+  }
+  .track {
+    animation:story-marquee 32s linear infinite;
+  }
+  .items span {
+    white-space:nowrap;
+  }
+  .items span:after {
+    content:'✦';
+    color:#af8ac7;
+    margin:0 24px;
+  }
+  .features:hover .track,.features:focus .track {
+    animation-play-state:paused;
+  }
+  .cta {
+    background:#c6a0ff;
+    animation:story-invite 3.4s ease-out infinite;
+  }
+  .cta:hover,.cta:focus-visible {
+    animation:none;
+    background:#d7bcff;
+  }
+  .cta:focus-visible,.features:focus-visible {
+    outline:2px solid #ead9ff;
+    outline-offset:3px;
+  }
+  .cta {
+    transform-origin:50% 70%;
+    animation-timing-function:ease-in-out;
+  }
+  .cta:active {
+    animation:none;
+    transform:scale(.98);
+  }
+  @media(prefers-reduced-motion:reduce) {
+    .track,.cta {
+      animation:none;
+    }
+    .track,.items {
+      width:100%;
+    }
+    .items {
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:6px 18px;
+      padding:0 16px;
+    }
+    .items span:after {
+      display:none;
+    }
+    .items[aria-hidden="true"],.items>span[aria-hidden="true"] {
+      display:none!important;
+    }
+  }
+  .brand {
+    color:inherit;
+    background:none;
+  }
+  .story-login {
+    background:none;
+    border:0;
+    color:#cbbbd8;
+    font-size:14px;
+    text-decoration:underline;
+    padding:8px 0;
+  }
+  .sub {
+    margin-bottom:0;
+  }
+}
+@keyframes story-invite {
+  0%,68%,100% {
+    transform:rotate(0);
+    box-shadow:0 0 0 0 #b38aee00;
+  }
+  74% {
+    transform:rotate(-1.5deg);
+    box-shadow:0 3px 14px #b38aee38;
+  }
+  81% {
+    transform:rotate(1.2deg);
+  }
+  88% {
+    transform:rotate(-.55deg);
+  }
+  94% {
+    transform:rotate(.25deg);
+  }
+}
+@keyframes story-marquee {
+  to {
+    transform:translateX(-50%);
+  }
+}
