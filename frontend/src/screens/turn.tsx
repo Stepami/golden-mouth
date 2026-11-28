@@ -19,7 +19,7 @@ import { flushSync } from 'react-dom'
 import { shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
 import { firstPost, results } from '../api/mock'
-import type { CommentT, Post, PostResult } from '../api/types'
+import type { BoosterStock, CommentT, Post, PostResult } from '../api/types'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
@@ -214,7 +214,7 @@ export function Live() {
         none: '02-3_result', viral: '02-5_viral', flop: '02-4_flop',
         viralCard: '02-5_viral', flopGuard: '02-3_result',
       }[result.virality]
-      nav.replace(screen, { result, post: created.post, dailyBaseline, dailyAfterPost, dailyAfterStar, commentPromise, predictedAuthorId: created.predictedAuthorId })
+      nav.replace(screen, { result, post: created.post, boosterStock: latest?.boosterStock, dailyBaseline, dailyAfterPost, dailyAfterStar, commentPromise, predictedAuthorId: created.predictedAuthorId })
     })() }, 0)
     return () => { active = false; clearTimeout(start) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -408,6 +408,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
   const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
   const explanation = r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
+  const boosterStock = nav.params.boosterStock as BoosterStock | undefined
   return (
     <div className="screen no-tab">
       <ChannelHead />
@@ -424,6 +425,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
               <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
               <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
             </dl>
+            {(r.virality === 'viralCard' || r.virality === 'flopGuard') && <ResultBooster result={r} stock={boosterStock} />}
             {realPost && dailyBaseline && <DailyTaskResult key={post.id} baseline={dailyBaseline}
               afterPost={dailyAfterPost} afterStar={dailyAfterStar} postId={post.id} onPulse={pulse} />}
             <section className="post-result-reaction" aria-label="Ответ персонажа">
@@ -450,6 +452,30 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
       </div>
     </div>
   )
+}
+
+function ResultBooster({ result, stock }: { result: PostResult; stock?: BoosterStock }) {
+  const viral = result.virality === 'viralCard'
+  const { multiplier, extraViews } = result.boosterEffect ?? {}
+  const remaining = stock && (viral ? stock.viralCharges : stock.flopGuardCharges)
+  const viralEffect = multiplier == null
+    ? 'Карта применила множитель к просмотрам и приросту подписчиков.'
+    : `Просмотры и прирост подписчиков ×${resultNumber.format(multiplier)}.`
+  const guardEffect = extraViews == null
+    ? 'Карта добавила просмотры.'
+    : `+${resultNumber.format(extraViews)} ${plural(extraViews, 'просмотр', 'просмотра', 'просмотров')}.`
+  return <div className="post-result-booster">
+    <span aria-hidden="true">✦</span>
+    <div>
+      <strong>{viral ? 'Сработала виральная карта' : 'Сработал флоп-гард'}</strong>
+      <p className="small">{viral
+        ? `Пост залетел. ${viralEffect}`
+        : `Карта защитила от отписок и дала прирост подписчиков. ${guardEffect}`}</p>
+      <p className="small muted">{remaining !== undefined
+        ? `В запасе осталось ${resultNumber.format(remaining)}`
+        : 'Остаток карт пока недоступен.'}</p>
+    </div>
+  </div>
 }
 
 export const Result = () => { const n = useNav(); const guest = useGuestSession(); if (guest) return <ResultCard r={guest.result} post={guest.post} theme="normal" />; const r = (n.params.result as PostResult) ?? results.normal; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="normal" /> }
