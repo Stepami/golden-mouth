@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { contentOf } from '../api/worldContent'
 import { api } from '../api/client'
+import { flyCrystal, pulseCrystalCounter } from '../ui/crystalFlight'
 import { useNav } from './nav'
 import { useStore } from './store'
 import { pendingLandingWorld } from './landing/experiment'
@@ -84,22 +85,8 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
       const end = (counter.querySelector('.onboarding-crystal-icon') ?? counter).getBoundingClientRect()
       if (!end.width || !end.height) return
       const flying = Array.from({ length: rewardCrystals }, (_, index) => {
-        const gem = document.createElement('span')
-        gem.className = 'game-onboarding-crystal-flight'; gem.dataset.onboardingFlight = String(index)
-        gem.setAttribute('aria-hidden', 'true')
-        const offset = index === 0 ? -13 : 13
-        const fromX = start.left + start.width / 2 + offset, fromY = start.top + start.height / 2
-        gem.style.left = `${fromX - 16}px`
-        gem.style.top = `${fromY - 16}px`
-        document.body.append(gem); active.nodes.push(gem)
-        const x = end.left + end.width / 2 - fromX
-        const y = end.top + end.height / 2 - fromY
-        const animation = gem.animate([
-          { transform: 'translate(0, 5px) scale(.7)', opacity: 0 },
-          { transform: `translate(${offset}px, -30px) rotate(${offset}deg) scale(1.15)`, opacity: 1, offset: .24 },
-          { transform: `translate(${x * .5 + offset}px, ${y * .54 - 12}px) rotate(14deg) scale(.85)`, opacity: 1, offset: .65 },
-          { transform: `translate(${x}px, ${y}px) rotate(35deg) scale(.24)`, opacity: .3 },
-        ], { duration: 610, delay: 85 + index * 130, easing: 'cubic-bezier(.24,.58,.23,1)', fill: 'both' })
+        const { gem, animation } = flyCrystal(start, end, index)
+        active.nodes.push(gem)
         active.animations.push(animation)
         return animation.finished.then(() => {
           gem.remove()
@@ -107,11 +94,7 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
           if (!preview && displayBalance !== undefined) {
             counter.dataset.onboardingFlightBalance = String(++displayBalance)
           }
-          active.animations.push(counter.animate([
-            { transform: 'scale(1)' },
-            { transform: 'scale(1.12)', boxShadow: '0 0 0 4px #a6e5ff35', offset: .32 },
-            { transform: 'scale(1)', boxShadow: '0 0 0 9px #a6e5ff00' },
-          ], { duration: 260, easing: 'ease-out' }))
+          active.animations.push(pulseCrystalCounter(counter))
         })
       })
       await Promise.all(flying)

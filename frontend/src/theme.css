@@ -762,6 +762,7 @@ body:has([data-crystal-shop]) .crystal-shop-intro { display: none; }
 .daily-result-reward > b { color: var(--text); font-size: 14px; }
 .daily-result-reward > span { color: var(--gift); font-weight: 700; font-size: 14px; }
 .daily-result-notice { position: fixed; z-index: 23; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(calc(100% - 24px), 400px); pointer-events: none; }
+.daily-result-notice:has(.daily-result-reward) { top: calc(84px + env(safe-area-inset-top)); }
 .daily-result-notice .daily-result { padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: #1a1a24; box-shadow: 0 6px 20px #0008; }
 .daily-result-notice .daily-result-reward { margin-top: 0; }
 .daily-result-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #9b6bff26; font-weight: 800; }

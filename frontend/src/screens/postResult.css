@@ -1,3 +1,7 @@
+.post-result-backdrop .post-result:has(.daily-result-reward) {
+  max-height: min(85dvh, calc(100dvh - 108px - env(safe-area-inset-top)));
+}
+
 @media (min-width: 621px) {
   .sheet-bg.post-result-backdrop {
     align-items: center;
@@ -9,6 +13,14 @@
     max-width: none;
     max-height: 100%;
     margin: 0;
+  }
+
+  .sheet-bg.post-result-backdrop:has(.daily-result-reward) {
+    padding-top: 84px;
+  }
+
+  .post-result-backdrop .post-result:has(.daily-result-reward) {
+    max-height: 100%;
   }
 
   .post-result .post-result-actions {

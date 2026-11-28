@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Player } from '../api/types'
+import { flyCrystal, pulseCrystalCounter } from './crystalFlight'
 import { dailyTasksFor, formatDailyNumber } from './DailyTasks'
 import { useResultHaptics, type ResultCue } from './resultHaptics'
 
@@ -68,6 +69,7 @@ function DailyTaskFeedback({ changes, complete, cardKey, progressKey, onPulse }:
   changes: DailyChange[]; complete: boolean; cardKey: string; progressKey?: string; onPulse: (cue: ResultCue) => void
 }) {
   const root = useRef<HTMLElement>(null)
+  const rewardFlight = useRef<(() => void) | undefined>(undefined)
   const changeKey = changes.map(task => `${task.type}:${task.progress}:${task.done}`).join(',')
   useLayoutEffect(() => {
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -79,22 +81,54 @@ function DailyTaskFeedback({ changes, complete, cardKey, progressKey, onPulse }:
 
   useEffect(() => {
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const stop = () => root.current?.querySelectorAll('[data-daily-animate]').forEach(element => element.removeAttribute('data-daily-animate'))
+    const stop = () => {
+      rewardFlight.current?.()
+      root.current?.querySelectorAll('[data-daily-animate]').forEach(element => element.removeAttribute('data-daily-animate'))
+    }
     const pause = () => { if (document.hidden || motion.matches) stop() }
     document.addEventListener('visibilitychange', pause)
     window.addEventListener('pagehide', stop)
     motion.addEventListener('change', pause)
     return () => {
+      rewardFlight.current?.()
       document.removeEventListener('visibilitychange', pause)
       window.removeEventListener('pagehide', stop)
       motion.removeEventListener('change', pause)
     }
   }, [])
 
+  function showReward(label: HTMLElement) {
+    onPulse('day')
+    const counter = document.querySelector<HTMLElement>('.game-page [data-onboarding-crystal-counter]')
+    const end = counter?.querySelector('.onboarding-crystal-icon')?.getBoundingClientRect()
+    if (!counter || !end?.width || !end.height) return
+    const start = label.getBoundingClientRect()
+    const flights = Array.from({ length: dailyReward }, (_, index) => flyCrystal(start, end, index))
+    let pulse: Animation | undefined
+    const stop = () => {
+      flights.forEach(({ gem, animation }) => { animation.cancel(); gem.remove() })
+      pulse?.cancel()
+      rewardFlight.current = undefined
+    }
+    rewardFlight.current?.()
+    rewardFlight.current = stop
+    flights.forEach(({ gem, animation }) => {
+      void animation.finished.then(() => {
+        gem.remove()
+        if (rewardFlight.current !== stop || !counter.isConnected) return
+        pulse?.cancel()
+        pulse = pulseCrystalCounter(counter)
+      }, () => gem.remove())
+    })
+  }
+
   if (!changes.length) return null
   return <section ref={root} className="daily-result" aria-label="Прогресс заданий дня" role="status" aria-live="polite">
     {complete && <div className="daily-result-reward" data-daily-effect={`${cardKey}:reward`}
-      onAnimationStart={event => { if (event.animationName === 'daily-reward-flash') onPulse('day') }}>
+      onAnimationStart={event => {
+        const label = event.currentTarget.lastElementChild
+        if (event.animationName === 'daily-reward-flash' && label instanceof HTMLElement) showReward(label)
+      }}>
       <b>Все задания выполнены</b>
       <span><span aria-hidden="true">💎</span> +{dailyReward} кристалла</span>
     </div>}
