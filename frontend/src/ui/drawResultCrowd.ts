@@ -1,4 +1,5 @@
 import type { WorldId } from '../api/types'
+import type { CrowdCue } from './resultHaptics'
 import { avatarUri } from './avatarRenderer'
 
 const pastels = ['#c2aaf0', '#9787d8', '#8ca5cd', '#d99bb7', '#a3c2b9', '#b7b1ce', '#8496bc', '#bca5db']
@@ -97,6 +98,8 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
 }) {
   const amount = Math.abs(delta)
   const loss = delta < 0
+  const end = loss ? 4400 : amount < 12 ? 11_100 : amount <= 38 ? 11_500 : 12_200
+  const activeUntil = loss ? end : amount < 12 ? 3500 : amount <= 38 ? 4800 : 6900
   const rows = crowdRows(amount)
   const count = rows.reduce((sum, row) => sum + row, 0)
   const spriteLimit = avatarStyle === 'lorelei' ? 20 : 24
@@ -133,22 +136,22 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
         const y = Math.max(size * 1.4 + 4, 39 + depth * (height - 48) + scatter(id + 140) * 7)
         people.push({
           id, x, y, size,
-          depth, side: x < width / 2 ? -1 : 1, duration: 470 + scatter(id + 170) * 250,
+          depth, side: x < width / 2 ? -1 : 1, duration: (loss ? 780 : 570) + scatter(id + 170) * 280,
           arrival: wave * (amount >= 500_000 ? 170 : 225) + scatter(id + 80) * 230,
-          departure: 1060 + (id % 4) * 135 + scatter(id + 80) * 210,
+          departure: 1940 + (id % 4) * 225 + scatter(id + 80) * 270,
         })
       }
     }
 
     if (!loss && amount >= 1_000_000) {
       const rotating = [...people].sort((a, b) => scatter(a.id + 812) - scatter(b.id + 812)).slice(0, 72)
-      rotating.forEach((figure, index) => { figure.exchange = 1730 + Math.floor(index / 24) * 205 + scatter(index + 333) * 130 })
+      rotating.forEach((figure, index) => { figure.exchange = 2270 + Math.floor(index / 24) * 245 + scatter(index + 333) * 130 })
     }
 
     if (loss) {
       const holders = count <= 2 ? [0] : count === 38 ? [16, 22, 33] : [Math.floor(count / 5), Math.floor(count / 2), Math.floor(count * .8)]
       holders.forEach((id, index) => {
-        people[id].sign = { index, text: count <= 2 ? 'Не моё' : boos[index], start: 150 + index * 120 }
+        people[id].sign = { index, text: count <= 2 ? 'Не моё' : boos[index], start: 420 + index * 230 }
       })
     } else {
       const slots = amount < 12 ? 2 : amount <= 38 ? 4 : 7
@@ -156,7 +159,7 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
       for (let index = 0; index < Math.min(slots, count); index++) {
         const cost = (figure: Figure) => Math.abs(figure.x / width - anchors[index]) * 2 + Math.abs(figure.depth - .64) * .7 + figure.arrival * .0006
         const holder = people.filter(figure => figure.exchange === undefined && !figure.sign).sort((a, b) => cost(a) - cost(b))[0]
-        holder.sign = { index, text: cheers[(offset + index) % cheers.length], start: Math.max(450 + index * 460, holder.arrival + 400) }
+        holder.sign = { index, text: cheers[(offset + index) % cheers.length], start: Math.max(1260 + index * 690, holder.arrival + 530) }
       }
     }
 
@@ -265,37 +268,46 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
 
       const progress = clamp(local / duration)
       const travel = ease(progress)
-      const sway = still ? 0 : Math.sin(time * .0055 + figure.id * .68) * (figure.depth + .25) * (1 - clamp((time - 1400) / 2400))
+      const sway = still ? 0 : Math.sin(time * .0055 + figure.id * .68) * (figure.depth + .25) * (1 - clamp((time - end + 900) / 900))
       const arrivedX = x + side * (11 + (1 - figure.depth) * 34) * (1 - travel) + sway * 1.65
       const arrivedY = y - 31 * (1 - travel) + Math.sin(progress * Math.PI * 5) * (1 - progress) * 3 + Math.abs(sway)
       drawFigure(figure, arrivedX, arrivedY, travel, clamp(local / 180))
       if (sign) {
         const age = time - sign.start
         const raise = ease(clamp(age / 230))
-        const opacity = still ? Number(sign.index === 0) : raise * (1 - clamp((age - 530) / 260))
+        const opacity = still ? Number(sign.index === 0) : raise * (1 - clamp((age - 1070) / 420))
         if (opacity) drawPlacard({ figure, x: arrivedX, y: arrivedY, raise, opacity })
       }
     }
     ctx.globalAlpha = 1
   }
 
-  return (still: boolean, pulse: () => void) => {
-    const end = loss ? 2550 : amount < 12 ? 1770 : amount <= 38 ? 2850 : 4050
-    const hitAt = loss ? 1200 : amount >= 1_000_000 ? 3100 : amount >= 50_000 ? 1550 : 420
+  return (still: boolean, pulse: (cue: CrowdCue) => void) => {
+    const cues: [number, CrowdCue][] = loss
+      ? [[550, 'crowd-open'], [2000, 'crowd-wave'], [3050, 'crowd-settle']]
+      : [[245, 'crowd-open'], [1320, 'crowd-wave'], [amount < 12 ? 2060 : amount <= 38 ? 3420 : 5450, 'crowd-settle']]
+    if (delta === 1) cues.pop()
     const start = performance.now()
     let frame = 0
     let time = still ? end : 0
-    let pulsed = false
+    let nextCue = 0
     const redraw = () => { resize(); draw(time, still) }
     const observer = new ResizeObserver(redraw)
     observer.observe(canvas)
     redraw()
     const tick = (now: number) => {
       const elapsed = Math.min(end, now - start)
-      if (elapsed - time >= 30 || elapsed === end) {
+      const frameInterval = elapsed < activeUntil ? 30 : 62
+      if (elapsed - time >= frameInterval || elapsed === end) {
         time = elapsed
         draw(time, false)
-        if (!pulsed && time >= hitAt) { pulsed = true; pulse() }
+        // Emit just the current accent if a slow frame crossed several cues.
+        let cue: CrowdCue | undefined
+        while (nextCue < cues.length && time >= cues[nextCue][0]) {
+          cue = cues[nextCue][1]
+          nextCue++
+        }
+        if (cue) pulse(cue)
       }
       if (time < end) frame = requestAnimationFrame(tick)
     }

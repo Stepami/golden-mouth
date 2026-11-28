@@ -12,6 +12,7 @@ import { AuthProviders } from './app/AuthProviders'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
+import { DailyTaskNotice } from './ui/DailyTaskResult'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
 import { GameOnboarding, isGameOnboardingPreview } from './app/GameOnboarding'
 import { beginGameOnboarding, gameOnboardingActive, useGameOnboarding, restartGameOnboardingPreview, isNextStoryPreview } from './app/GameOnboardingState'
@@ -118,7 +119,7 @@ function Shell({ signup, onCancelSignup }: { signup: boolean; onCancelSignup?: (
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className={`app game-shell${wideTab !== undefined ? ' game-with-rail' : ''}`}>
         {isGameOnboardingPreview() && <div className="game-onboarding-preview-label">DEV-обучение · действия сохраняются в игре <button onClick={() => restartGameOnboardingPreview(player?.worldInstanceId ?? player?.world)}>Начать просмотр заново</button><button onClick={() => { restartGameOnboardingPreview(); nav.push('01-3_world') }}>С выбора мира</button></div>}
-        <div key={top.id} className={top.id === '01-3_world' ? 'game-page game-catalog-page worlds-arrival' : 'game-page'}><Screen /></div><WorldUnlockCelebration /><GameOnboarding lockedSection={lockedSection} />
+        <div key={top.id} className={top.id === '01-3_world' ? 'game-page game-catalog-page worlds-arrival' : 'game-page'}><Screen /></div><DailyTaskNotice player={player} screen={top.id} /><WorldUnlockCelebration /><GameOnboarding lockedSection={lockedSection} />
         {wideTab !== undefined && (
           <nav className={tab === undefined ? 'game-wide-nav' : 'tabbar'} aria-label="Основная навигация">
             <div className="game-brand"><img src="/android-chrome-192x192.png" alt="" />Реки</div>

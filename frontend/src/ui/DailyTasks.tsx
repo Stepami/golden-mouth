@@ -217,7 +217,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
         <p className="small muted" role="status">{failed ? 'Не получилось обновить задания.' : 'Задания пока недоступны.'}</p>
         <button type="button" className="text-button" onClick={reload} disabled={busy}>{busy ? 'Обновляем…' : 'Обновить'}</button>
       </div>)}
-    </section> : <button className="daily-entry" onClick={() => show()}><span>Задания дня</span><span data-daily-count>{status} ›</span></button>}
+    </section> : <button className="daily-entry" onClick={() => show()}><span>Задания дня</span><span>{status} ›</span></button>}
     {isOpen && createPortal(<Sheet onClose={close}>
       <div className="daily-panel" role="dialog" aria-label="Задания дня" onKeyDown={e => { if (e.key === 'Escape') close() }}>
         <div className="daily-panel-head">
