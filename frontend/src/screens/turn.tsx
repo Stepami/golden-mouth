@@ -136,7 +136,8 @@ export function Compose() {
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" hint={!guest && !repostId && profile && <NextStoryEditorHint player={profile} />} disabled={!text.trim()} onMain={publish} />
+      <BottomCTA main={<span className="publish-button-label">Опубликовать<kbd aria-hidden="true" title="Enter в поле поста. Shift+Enter добавляет строку.">Enter</kbd></span>}
+        hint={!guest && !repostId && profile && <NextStoryEditorHint player={profile} />} disabled={!text.trim()} onMain={publish} />
     </div>
   )
 }
