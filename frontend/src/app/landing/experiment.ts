@@ -7,6 +7,7 @@ let worldFallback: string | undefined
 let fallback: Assignment | undefined
 const valid = (value: unknown): value is LandingVariant => value === 'worlds' || value === 'hogwarts' || value === 'infobiz' || value === 'evening' || value === 'houses'
 export const isLandingPreview = () => !!import.meta.env?.DEV && new URLSearchParams(location.search).get('preview') === 'landing'
+export const isStoryLanding = (v: LandingVariant | undefined) => v === 'evening' || v === 'hogwarts'
 export function requestedVariant(): LandingVariant | undefined {
   const value = new URLSearchParams(location.search).get('landing')
   return valid(value) ? value : undefined
@@ -50,7 +51,7 @@ export function assignLanding(): LandingVariant {
 }
 export function landingContext(): Record<string, string> | undefined {
   const value = read()
-  return value ? { ...value.utm, landing_experiment: 'entry_v1', landing_variant: value.variant, landing_initial_variant: valid(value.initialVariant) ? value.initialVariant : value.variant, landing_switched: value.switched ? 'true' : 'false', landing_source: value.source, ...(value.worldId ? { landing_world_id: value.worldId } : {}) } : undefined
+  return value ? { ...value.utm, ...(isStoryLanding(value.variant) ? { landing_version: 'story_v1' } : {}), landing_experiment: 'entry_v1', landing_variant: value.variant, landing_initial_variant: valid(value.initialVariant) ? value.initialVariant : value.variant, landing_switched: value.switched ? 'true' : 'false', landing_source: value.source, ...(value.worldId ? { landing_world_id: value.worldId } : {}) } : undefined
 }
 let authFallback = false
 export function landingAuthPending(): boolean {

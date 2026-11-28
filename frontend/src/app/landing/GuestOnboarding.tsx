@@ -1,3 +1,4 @@
+import { isStoryLanding, requestedVariant } from './experiment'
 import { trackLandingAuth } from '../analytics'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Avatar, Button } from '../../ui'
@@ -295,7 +296,7 @@ export function GuestOnboarding({ worldId, onSave }: {
   const [draft, setDraft] = useState<GuestDraft>(() => {
     const saved = readGuestDemo()
     if (saved?.worldId === worldId) return saved
-    return { worldId, screen: '03-5_stage', hero: fixture.heroes[0].id }
+    return { worldId, screen: isStoryLanding(requestedVariant()) ? '02-1_compose' : '03-5_stage', hero: fixture.heroes[0].id }
   })
   const { screen, hero, published, replySubmitted, replyDone, collected } = draft
   const [storageAvailable, setStorageAvailable] = useState(true)

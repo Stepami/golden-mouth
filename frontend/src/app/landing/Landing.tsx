@@ -4,8 +4,9 @@ import { worlds as templates } from '../../api/worldContent'
 import type { World } from '../../api/types'
 import { Button } from '../../ui'
 import { screenView, trackLanding, trackLandingAuth } from '../analytics'
-import { assignLanding, requestedVariant } from './experiment'
+import { assignLanding, requestedVariant, isStoryLanding } from './experiment'
 import './landing.css'
+import './story-entry.css'
 
 const worlds = [
   { id: 'infobiz', templateId: '5720946a-ea7c-4a10-9c50-51ce3deefc53', title: 'Последние инфобизеры' },
@@ -44,6 +45,26 @@ export function Landing({ onContinue, preview = false }: { onContinue: (worldId?
     if (clicked.current) return
     clicked.current = true
     onContinue(worldId)
+  }
+  if (hero && isStoryLanding(variant)) {
+    const evening = variant === 'evening'
+    const features = ['Веди блог от лица героя', 'Получай ответы персонажей', 'Развивай отношения в комментариях', 'Собирай подписчиков', 'Пробуй другие миры и роли']
+    return <main className="story-entry">
+      <header><div className="brand"><img src="/android-chrome-192x192.png?v=wave-2" alt="" />Реки</div></header>
+      <div className="story-wrap"><section className="hero">
+        <img className="cover" src={evening ? '/landing/evening-full.png' : '/landing/hogwarts-960.jpg'} srcSet={evening ? '/landing/evening-480.jpg 480w, /landing/evening-full.png 1024w' : '/landing/hogwarts-480.jpg 480w, /landing/hogwarts-960.jpg 960w'} sizes="(max-width:700px) 100vw, 550px" fetchPriority="high" alt={hero.title} />
+        <div><div className="world">{hero.title}</div>
+          <h1>{evening ? 'Тебе ответил Эдуард' : 'Тебе ответил Драко'}</h1>
+          <p>{evening ? 'Веди блог Изабеллы. После грозы на поляне остались вопросы. Опубликуй свою версию и прочитай, что скажет Эдуард.' : 'Веди блог от лица Гарри Поттера. Хогвартс закрывают, Драко хочет открыть отель. Что ты скажешь ученикам?'}</p>
+          <button className="cta" onClick={() => start(hero.templateId)}>{evening ? 'Начать за Изабеллу' : 'Начать за Гарри'}</button>
+          <small className="sub">Играть гостем · без регистрации</small>
+          <button className="story-login" onClick={() => start()}>Уже есть аккаунт? Войти</button>
+        </div>
+      </section></div>
+      <footer className="features" tabIndex={0} aria-label="Возможности игры"><div className="track">{[0, 1].map(group =>
+        <div key={group} className="items" aria-hidden={group === 1 || undefined}>{[...features, ...features].map((feature, i) =>
+          <span key={i} aria-hidden={i >= features.length || undefined}>{feature}</span>)}</div>)}</div></footer>
+    </main>
   }
   return <main className={`entry-landing entry-landing--${variant}${hero ? ' entry-landing--single' : ''}`} aria-labelledby="landing-title">
     {hero && <img className="landing-hero-art" src={hero.id === 'hogwarts' ? '/landing/hogwarts-960.jpg' : `/landing/${hero.id}-full.png`} srcSet={hero.id === 'hogwarts' ? '/landing/hogwarts-480.jpg 480w, /landing/hogwarts-960.jpg 960w' : hero.id === 'infobiz' ? '/landing/infobiz-full.png 1536w' : `/landing/${hero.id}-480.jpg 480w, /landing/${hero.id}-full.png 1024w`} sizes="(max-width: 430px) 100vw, 430px" alt="" fetchPriority="high" />}
