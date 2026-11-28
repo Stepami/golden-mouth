@@ -6,7 +6,8 @@ import { ErrorBoundary } from './app/ErrorBoundary'
 import { installAnalytics } from './app/analytics'
 import { installGlobalHandlers } from './app/log'
 import { initTelegram } from './telegram'
-import { rememberReferral } from './app/referral'
+import { isReferralCode, rememberReferral } from './app/referral'
+import { recordEntryStep } from './app/landing/openobserve'
 import './theme.css'
 
 const callbackParams = new URLSearchParams(location.hash.slice(1))
@@ -19,8 +20,10 @@ if (yandexCallback) {
 } else {
   const query = new URLSearchParams(location.search)
   if (query.has('shot')) document.documentElement.classList.add('shot')
-  rememberReferral(query.get('ref'))
+  const referral = query.get('ref')
+  rememberReferral(referral)
   initTelegram()
+  if (isReferralCode(referral)) recordEntryStep('landing_referral_open')
   installGlobalHandlers()
   installAnalytics()
   createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><App /></ErrorBoundary></StrictMode>)

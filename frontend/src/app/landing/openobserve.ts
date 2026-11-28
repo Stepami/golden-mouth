@@ -2,10 +2,10 @@ import { apiBaseUrl } from '../runtimeConfig'
 import { TelemetryClient } from '../../api/generated/reki-api'
 import type { AnalyticsBatchRequest, AnalyticsEventRequest } from '../../api/generated/reki-api'
 import { transport } from '../../api/transport'
-import { isLandingPreview, landingContext, landingVisitIdentity } from './experiment'
+import { isLandingPreview, landingContext, landingVisitIdentity, landingVisitorId } from './experiment'
 
 export type EntryStep = 'landing_view' | 'landing_continue' | 'landing_auth_complete'
-  | 'landing_world_selected' | 'landing_character_selected' | 'landing_reaction_viewed'
+  | 'landing_world_selected' | 'landing_character_selected' | 'landing_reaction_viewed' | 'landing_referral_open'
 type EntryEvent = AnalyticsEventRequest & { t: number; props: Record<string, string | boolean> }
 const base = new URL(apiBaseUrl || '/', window.location.origin).href.replace(/\/$/, '')
 const anonymous = new TelemetryClient(base, {
@@ -40,7 +40,10 @@ const batch = (events: EntryEvent[]): AnalyticsBatchRequest => ({
 })
 export function recordEntryStep(name: EntryStep, postId?: string) {
   if (!enabled()) return
-  const context = visit()
+  const context = visit() ?? (name === 'landing_referral_open' ? {
+    visitor_id: landingVisitorId(), entry_id: crypto.randomUUID(),
+    landing_variant: 'worlds', landing_initial_variant: 'worlds', landing_source: 'link', landing_switched: false,
+  } : undefined)
   if (!context) return
   pending.push({ name, screen: 'landing', t: Date.now(), props: { ...context, event_id: crypto.randomUUID(), ...(postId ? { entry_post_id: postId } : {}) } })
   pending = pending.filter(e => e.t >= Date.now() - 86400000).slice(-20)
