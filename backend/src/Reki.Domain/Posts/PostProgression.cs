@@ -13,5 +13,4 @@ public sealed record PostProgression(
     long Likes,
     StarId Commenter,
     PostScore Score,
-    int Multiplier = 1,
-    int ExtraViews = 0);
+    PostBoosterEffect? BoosterEffect = null);

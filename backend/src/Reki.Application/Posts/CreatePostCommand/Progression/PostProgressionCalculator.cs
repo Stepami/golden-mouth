@@ -30,8 +30,20 @@ internal sealed class PostProgressionCalculator(
 
         var starId = await stars.GetRelevantCommenterAsync(gameWorld, post);
         var result = await viralityCalculator.CalculateAsync(post, turn, gameWorld, cancellationToken);
-        var (views, likes) = postNumbersCalculator.Calculate(gameWorld, result);
+        var (views, likes, baseViews) = postNumbersCalculator.Calculate(gameWorld, result);
         var subscriberDelta = subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, result);
+        var effect = result.Virality switch
+        {
+            PostViralityStatus.ViralCard => new PostBoosterEffect(
+                subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, new(PostViralityStatus.None)),
+                baseViews,
+                Multiplier: result.Multiplier),
+            PostViralityStatus.FlopGuard => new PostBoosterEffect(
+                subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, new(PostViralityStatus.Flop)),
+                baseViews,
+                ExtraViews: result.ViewsAdder),
+            _ => null,
+        };
         var skills = AddSkillExperience(player, post, turn, ownWords);
         var levelChange = skills.ToDictionary(
             item => item.Key,
@@ -47,8 +59,7 @@ internal sealed class PostProgressionCalculator(
             likes,
             starId,
             turn,
-            result.Multiplier,
-            result.ViewsAdder);
+            effect);
     }
 
     private IReadOnlyDictionary<SkillId, SkillProgress> AddSkillExperience(

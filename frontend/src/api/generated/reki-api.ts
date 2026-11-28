@@ -1864,6 +1864,8 @@ export interface BestCommentResponse {
 export interface BoosterEffectResponse {
     multiplier: number | null;
     extraViews: number | null;
+    subscriberDeltaWithoutBooster: number;
+    viewsWithoutBooster: number;
 
     [key: string]: any;
 }

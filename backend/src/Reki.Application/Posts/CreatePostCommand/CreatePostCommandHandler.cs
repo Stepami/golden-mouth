@@ -141,12 +141,13 @@ internal sealed class CreatePostCommandHandler(
             null,
             post.Virality,
             post.Views,
-            post.Virality switch
-            {
-                PostViralityStatus.ViralCard => new BoosterEffectResponse(progression.Multiplier, null),
-                PostViralityStatus.FlopGuard => new BoosterEffectResponse(null, progression.ExtraViews),
-                _ => null,
-            });
+            progression.BoosterEffect is { } effect
+                ? new BoosterEffectResponse(
+                    effect.Multiplier,
+                    effect.ExtraViews,
+                    effect.SubscriberDeltaWithoutBooster,
+                    effect.ViewsWithoutBooster)
+                : null);
 
         return new CreatePostResponse(
             post.MapPost(world, player.Id),
