@@ -182,7 +182,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
       <div className="world-editor-title">{text('emoji', 'Значок', { maxLength: 8, info: { topic: 'emoji' } })}{text('title', 'Название мира', { maxLength: 120, required: true, info: { topic: 'title' } })}</div>
       {text('description', 'О чём этот мир', { rows: 3, required: true, help: ownWorld ? 'Опиши место и что в нём происходит.' : 'Что здесь необычного и какие истории хочется прожить?', info: { topic: 'description' } })}
       {text('firstContext', 'С чего начинается история', { rows: 3, help: ownWorld ? 'Напиши, что случилось перед первым постом.' : 'Если оставить пустым, в канале появится описание мира.', info: { topic: 'firstContext' } })}
-      <details className="editor-extra"><summary>Дополнить карточку и завязку</summary>
+      <details className="editor-extra"><summary>Карточка мира и первый пост</summary>
         {text('summary', 'Подпись на карточке', { maxLength: 200, info: { topic: 'summary' } })}
         {text('where', 'Где всё происходит', { maxLength: 200, info: { topic: 'where' } })}
         {text('firstPrompt', 'Подсказка для первого поста', { rows: 2, help: 'Задай вопрос, с которого можно начать пост.', info: { topic: 'firstPrompt' } })}
