@@ -903,3 +903,20 @@ body:has([data-crystal-shop]) .crystal-shop-intro { display: none; }
   .game-shell:has(> .tabbar) .bottom-cta:has(.next-story-dock) { bottom: var(--reply-keyboard-inset, 0px) !important; }
   .game-shell > .game-onboarding-progress:not(.is-inline) { bottom: 16px; }
 }
+
+.settings-group-title { font-size: 17px; margin: 14px 0 4px; }
+.settings-account { padding: 2px 14px 14px; }
+.settings-grid button:disabled { cursor: default; }
+@media (min-width: 621px) {
+  .game-shell .game-page:has(.settings-screen, .publication-rules) { --work: min(1040px, var(--available)); }
+  .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  .settings-grid > .card { min-width: 0; }
+  .publication-rules > .pad { max-width: 680px; margin: 24px 16px; padding: 24px; border: 1px solid var(--line2); border-radius: 18px; background: var(--card); }
+  .publication-rules h1 { font-size: clamp(24px, 3vw, 34px); line-height: 1.15; }
+  .publication-rules .publication-guidelines { margin: 20px 0; gap: 12px; }
+  .publication-rules .btn { width: auto; margin-top: 18px; padding-inline: 24px; }
+  body:has(.settings-screen) .sheet-bg { align-items: center; padding: 24px; }
+  body:has(.settings-screen) .sheet { width: min(100%, 510px); max-width: none; margin: 0; padding: 26px; }
+  body:has(.settings-screen) .sheet .btn { width: auto; margin-right: 8px; padding-inline: 22px; }
+  body:has(.settings-screen) .install-dialog h2[tabindex="-1"]:focus { outline: none; }
+}
