@@ -6,6 +6,12 @@
   aspect-ratio: 3 / 2;
 }
 
+.worlds-home .world-cover-image > .world-art {
+  position: absolute;
+  inset: 0;
+}
+.worlds-home .owned-stories + .btn { margin-top: 12px; }
+
 .owned-stories .world-resume .world-resume-body {
   display: flex;
   align-items: flex-start;
@@ -53,6 +59,12 @@
 .mood-setup .quick-summary { margin-top: 18px; }
 
 @media (min-width: 621px) {
+  .worlds-home .owned-stories + .btn { width: auto; padding-inline: 24px; }
+  .game-shell .world-catalog .world-cover-copy .row {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+  }
   .game-shell .story-setup.no-tab {
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
