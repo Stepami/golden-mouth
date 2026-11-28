@@ -791,3 +791,115 @@ body:has([data-crystal-shop]) .crystal-shop-intro { display: none; }
 .mention-choice b, .mention-choice small { display: block; overflow-wrap: anywhere; }
 .mention-choice b { font-size: 13px; }
 .mention-choice small { color: var(--lilac); font-size: 12px; }
+
+/* The game shell owns its layout independently of the public landing pages. */
+.game-wide-nav, .game-brand, .game-world-summary, .world-resume-cover { display: none; }
+.game-context { display: contents; }
+@media (max-width: 620px) {
+  .game-shell .channel-posts { padding-top: 0; }
+  .game-shell .channel-posts > h2 { display: none; }
+}
+.game-shell .game-page { min-width: 0; overflow-wrap: anywhere; }
+.game-shell .compose-screen > .game-context > :is(.daily-editor, .story-goal) { margin-inline: 16px; }
+.game-shell .compose-screen > .game-context > :first-child + * { margin-top: 14px; }
+.game-shell .compose-screen > .game-context > .story-goal { margin-bottom: 0; }
+.game-shell.game-onboarding-active:has(> .tabbar) .thread-reply {
+  bottom: max(var(--reply-keyboard-inset, 0px), calc(78px + env(safe-area-inset-bottom))) !important;
+}
+@media (max-width: 380px) {
+  .game-shell .thread-screen > .top { flex-wrap: wrap; gap: 4px 8px; }
+  .game-shell .thread-header-actions { gap: 5px; flex-wrap: wrap; }
+}
+@media (min-width: 621px) {
+  .game-shell {
+    --frame: min(100vw, 1360px);
+    --rail: 0px;
+    --space: 24px;
+    --available: calc(var(--frame) - var(--rail) - 2 * var(--space));
+    width: 100%; max-width: 1360px;
+    padding: 16px var(--space) 0 calc(var(--rail) + var(--space));
+  }
+  .game-shell .game-page {
+    --work: min(700px, var(--available));
+    --reading: var(--work);
+    width: min(100%, var(--work)); margin-inline: auto;
+  }
+  .game-shell .game-page:has(.game-columns) {
+    --work: min(1080px, var(--available));
+    --side: clamp(210px, 25vw, 310px);
+    --reading: calc(var(--work) - var(--side) - var(--space));
+  }
+  .game-shell .game-catalog-page { --work: var(--available); }
+  .game-shell .game-columns {
+    display: grid; grid-template-columns: minmax(0, 1fr) var(--side);
+    column-gap: var(--space); align-content: start; align-items: start;
+  }
+  .game-columns > .post-list-pull { grid-column: 1 / -1; grid-row: 1; }
+  .game-columns > .top { grid-column: 1 / -1; grid-row: 2; margin-bottom: 16px; }
+  .game-columns > .pad { grid-column: 1; grid-row: 3; min-width: 0; padding-inline: 0; }
+  .game-columns > .pad ~ .pad { grid-row: 4; }
+  .game-columns > .game-context {
+    display: grid; gap: 14px; grid-column: 2; grid-row: 3 / span 2;
+    min-width: 0; padding-top: 14px;
+  }
+  .game-context .game-world-summary { display: block; overflow: hidden; padding: 0; border: 1px solid var(--line2); }
+  .game-world-summary .world-art { height: clamp(110px, 13vw, 172px); }
+  .game-world-summary > div:last-child { padding: 14px; }
+  .game-world-summary h2 { font-size: 20px; line-height: 1.2; }
+  .game-world-summary p { margin-top: 8px; }
+  .game-shell .game-context > :is(.daily-channel, .daily-entry),
+  .game-shell .compose-screen > .game-context > :is(.daily-editor, .story-goal) { margin: 0; min-width: 0; }
+  .game-shell .game-columns .top { padding: 16px 0; }
+  .game-shell .bottom-cta {
+    width: var(--reading); max-width: none;
+    left: calc((100% - var(--work) + var(--rail)) / 2);
+    transform: none; padding-inline: 0;
+  }
+  .game-shell .world-catalog, .game-shell .owned-stories {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
+  }
+  .game-shell .world-catalog { overflow: visible; padding: 0; }
+  .game-shell .world-resume:has(.world-resume-cover) {
+    position: relative; isolation: isolate; overflow: hidden; min-height: 186px;
+    align-items: flex-end; color: white; background: #17131e;
+  }
+  .game-shell .world-resume-cover { display: block; position: absolute; inset: 0; z-index: -1; }
+  .world-resume-cover img { object-position: center 30%; }
+  .world-resume-cover::after { content: ''; position: absolute; inset: 0; background: linear-gradient(transparent, #0d0b13eb 94%); }
+  .world-resume:has(.world-resume-cover) .muted { color: #e4dfe9; }
+  .game-shell .channel-extras { padding: 0; }
+  .game-shell .channel-posts > h2 { font-size: 24px; margin-bottom: 16px; }
+  .game-shell .world-cover-card { display: flex; flex-direction: column; }
+  .game-shell .world-cover-image { width: 100%; height: clamp(170px, 19vw, 228px); }
+  .game-shell .world-cover-copy { width: 100%; flex: 1; display: flex; flex-direction: column; }
+  .game-shell .world-cover-copy .row { align-items: baseline; flex-wrap: wrap; }
+  .game-shell .world-roster { margin-top: auto; }
+  .game-shell .tabbar { max-width: none; }
+  .game-shell .game-page :focus-visible, .game-shell nav button:focus-visible { outline: 2px solid var(--lilac); outline-offset: -2px; }
+}
+@media (min-width: 1051px) {
+  .game-shell { --space: 32px; }
+  .game-shell.game-with-rail { --rail: 208px; }
+  .game-shell > :is(.tabbar, .game-wide-nav) {
+    position: fixed; z-index: 10; left: max(0px, calc((100% - var(--frame)) / 2));
+    top: 0; bottom: auto; transform: none; width: var(--rail); height: 100dvh; max-width: none;
+    display: flex; flex-direction: column; justify-content: start; gap: 6px;
+    overflow-y: auto; padding: 26px 16px; border: 0; border-right: 1px solid var(--line); background: var(--bg);
+  }
+  .game-shell nav .game-brand { display: flex; align-items: center; gap: 10px; padding: 0 12px 32px; font-size: 26px; font-weight: 750; }
+  .game-brand img { width: 36px; height: 36px; border-radius: 10px; }
+  .game-shell > nav button {
+    display: flex; flex: none; flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px;
+    width: 100%; min-height: 46px; padding: 8px 14px; border: 0; border-radius: 12px;
+    background: transparent; color: var(--muted); font-size: 15px; text-align: left;
+  }
+  .game-shell > nav button b { width: 22px; font-size: 21px; font-weight: 400; text-align: center; }
+  .game-shell > nav button.on { background: #251e32; color: var(--lilac); }
+  .game-shell > nav button:hover:enabled { background: var(--card2); }
+  .game-shell .world-catalog { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .game-shell .owned-stories { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+  .game-shell .screen .bottom-cta,
+  .game-shell.game-onboarding-active:has(> .tabbar) .screen .bottom-cta,
+  .game-shell:has(> .tabbar) .bottom-cta:has(.next-story-dock) { bottom: var(--reply-keyboard-inset, 0px) !important; }
+  .game-shell > .game-onboarding-progress:not(.is-inline) { bottom: 16px; }
+}

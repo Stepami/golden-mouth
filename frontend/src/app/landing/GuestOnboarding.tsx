@@ -397,8 +397,12 @@ export function GuestOnboarding({ worldId, onSave }: {
     sendReply: () => { guestAction('send_demo_reply'); setDraft(current => ({ ...current, reply, replySubmitted: true })) },
     crystals: collected ? 2 : 0, hint: !replyDone ? <GuestHint screen={screen} published={published} /> : undefined,
   }}>
-    <main ref={game} className={replyDone ? 'app guest-finish' : 'app guest-game'}>
-      <div key={screen}><View /></div>
+    <main ref={game} className={`app game-shell game-with-rail guest-shell ${replyDone ? 'guest-finish' : 'guest-game'}`}>
+      <nav className="game-wide-nav" aria-label="Навигация по демо">
+        <div className="game-brand"><img src="/android-chrome-192x192.png" alt="" />Реки</div>
+        <button type="button" className="on" aria-current="location" disabled={screen === '03-5_stage' || screen === '02-2_live' || screen === '02-3_result' || replySubmitted} onClick={() => go('03-5_stage')}><b>▦</b>Канал</button>
+      </nav>
+      <div key={screen} className="game-page"><View /></div>
       {!replyDone && (screen === '02-2_live' || (screen === '02-6_thread' && replySubmitted)) && <GuestHint screen={screen} inline={false} />}
       {replyDone && <GuestFinish worldId={worldId} selected={selected} avatarStyle={world.avatarStyle} collected={!!collected} onClaim={() => guestAction('claim_demo_reward')}
         onCollect={() => setDraft(current => ({ ...current, collected: true }))} onSave={() => onSave({ text, reply, hero, dialogue: { starId: other.id, first: speaker.first, final: speaker.second } })} />}

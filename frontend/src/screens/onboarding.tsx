@@ -6,6 +6,7 @@ import { DailyTasks } from '../ui/DailyTasks'
 import { Streak } from '../ui/Streak'
 import { displayHandle } from '../app/handle'
 import { usePresetGoal } from '../ui/StoryGoal'
+import { WorldContext } from '../ui/WorldContext'
 import { WorldCover } from '../ui/WorldCover'
 import approvedIntro from '../assets/intro-school-approved.png'
 import { useEffect, useRef, useState } from 'react'
@@ -143,7 +144,7 @@ function Under18() {
 }
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
-export function ChannelHead({ firstPublishedPostId, hideDaily = false }: { firstPublishedPostId?: string; hideDaily?: boolean } = {}) {
+export function ChannelHead({ hideDaily = false }: { hideDaily?: boolean } = {}) {
   const guest = useGuestSession(); const profile = useStore()?.player; const nav = useNav()
   const p = guest?.player ?? profile!
   const w = guest?.world ?? worldOf(p.world)
@@ -154,7 +155,7 @@ export function ChannelHead({ firstPublishedPostId, hideDaily = false }: { first
       {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
       {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
     </div>
-    {!guest && !hideDaily && nav.current !== '02-2_live' && <DailyTasks inline={nav.current === '03-5_stage'} firstPublishedPostId={firstPublishedPostId} />}
+    {!guest && !hideDaily && nav.current !== '02-2_live' && <DailyTasks inline={nav.current === '03-5_stage'} />}
   </>
 }
 
@@ -182,11 +183,11 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
   const nav = useNav()
   const session = useGuestSession()
   const suggested = starter || prompt
-  if (session?.published) return <div className="screen channel-screen"><ChannelHead /><div className="pad">
+  if (session?.published) return <div className="screen channel-screen game-columns"><ChannelHead /><WorldContext world={p.world} /><div className="pad">
     <Card><p>{session.post.text}</p></Card>
   </div><BottomCTA main="Посмотреть реакции" onMain={() => nav.push('02-6_thread', { focusReply: true })} /></div>
   const openEditor = () => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }
-  if (custom) return <div className="screen first-story-screen">
+  if (custom) return <div className="screen first-story-screen game-columns">
     <ChannelHead hideDaily />
     <div className="pad">
       <section className="card first-story own-world-kickoff">
@@ -196,10 +197,10 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest =
         <Button onClick={openEditor}>Написать первый пост</Button>
       </section>
     </div>
-    <DailyTasks inline={nav.current === '03-5_stage'} />
+    <WorldContext world={p.world}><DailyTasks inline={nav.current === '03-5_stage'} /></WorldContext>
     <div className="pad"><Streak streak={p.streak} />{offer}</div>
   </div>
-  return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
+  return <div className="screen first-story-screen game-columns"><ChannelHead hideDaily /><WorldContext world={p.world}>{!guest && <DailyTasks inline={nav.current === '03-5_stage'} />}</WorldContext><div className="pad">
     {!suggested && <Streak streak={p.streak} />}
     {offer}
     <div className="card first-story">

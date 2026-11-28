@@ -13,7 +13,7 @@ import { WorldSwitchDialog } from '../ui/WorldSwitchDialog'
 import { WorldCover } from '../ui/WorldCover'
 import { useEffect, useState, type ReactNode } from 'react'
 import { api, ApiError } from '../api/client'
-import { worldDefinitionOf, worldDocumentOf, worlds } from '../api/worldContent'
+import { optionalWorldTemplate, worldDefinitionOf, worldDocumentOf, worlds } from '../api/worldContent'
 import type { Player, WorldDefinition, WorldDocument } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -28,7 +28,9 @@ import { avatarPersonalization, setAvatarPersonalization } from '../app/avatarPe
 import { displayHandle, heroHandle } from '../app/handle'
 
 function SavedWorldCard({ world, player, duplicate, opening, onOpen }: { world: WorldDocument; player?: Player; duplicate?: number; opening: string | null; onOpen: () => void }) {
+  const cover = optionalWorldTemplate(world)?.id ?? world.id
   return <button data-game-onboarding-world={world.id} className={`world-resume card${player ? ' world-resume-current' : ''}`} disabled={opening !== null} onClick={onOpen}>
+    {player && worldArt[cover] && <WorldCover world={cover} catalog className="world-resume-cover" />}
     <Avatar seed={world.avatar} avatarStyle={world.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={42} />
     <div>
       <div className="world-resume-heading"><b>{world.emoji} {world.title}</b>{player && <span className="world-resume-label">Текущая</span>}</div>
