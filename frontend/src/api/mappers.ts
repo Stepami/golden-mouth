@@ -24,7 +24,9 @@ export function player(value: Input<Wire.PlayerResponse>, streak: { count: numbe
     if (!item) throw new Error('Missing player skill')
     return { level: number(item.level), progress: number(item.progress) }
   }
+  const stock: Input<Ui.BoosterStock> | null | undefined = value.boosterStock
   return { ...value, birthYear: number(value.birthYear), energyWallet: value.energyWallet == null ? value.energyWallet : energyWallet(value.energyWallet), ageBand, energy: number(value.energy), streak: { days: streakDays, week: Array.from({ length: 7 }, (_, day) => day < streakDays), nextReward: 'ещё день — и бонус' }, skills: { brave: skill('brave'), humor: skill('humor'), topic: skill('topic') },
+    boosterStock: stock == null ? undefined : { viralCharges: number(stock.viralCharges), flopGuardCharges: number(stock.flopGuardCharges) },
     dailyChallenge: { ...value.dailyChallenge, values: Object.fromEntries(Object.entries(value.dailyChallenge.values).map(([worldId, tasks]) => [worldId, Object.fromEntries(Object.entries(tasks).map(([type, task]) => [type, { ...task, target: number(task.target), progress: number(task.progress) }]))])) },
   }
 }
@@ -36,7 +38,17 @@ export function energyWallet(value: Input<Wire.EnergyWalletResponse>): Wire.Ener
 }
 export const comment = (value: Input<Wire.CommentResponse>): Ui.CommentT => ({ ...value, depth: number(value.depth) })
 export const post = (value: Input<Wire.PostDetailResponse>): Ui.PostDetailResponse => ({ ...value, views: number(value.views), likes: number(value.likes), likedBy: value.likedBy, comments: value.comments.map(comment) })
-export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
+export function result(value: Input<Wire.PostResultResponse>): Ui.PostResult {
+  const effect: Input<Ui.BoosterEffect> | null | undefined = value.boosterEffect
+  return { ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })),
+    boosterEffect: effect == null ? undefined : {
+      multiplier: effect.multiplier == null ? undefined : number(effect.multiplier),
+      extraViews: effect.extraViews == null ? undefined : number(effect.extraViews),
+      subscriberDeltaWithoutBooster: effect.subscriberDeltaWithoutBooster == null ? undefined : number(effect.subscriberDeltaWithoutBooster),
+      viewsWithoutBooster: effect.viewsWithoutBooster == null ? undefined : number(effect.viewsWithoutBooster),
+    },
+  }
+}
 export function friend(value: Input<Wire.FriendResponse>): Ui.Friend {
   if (value.pronoun !== 'её' && value.pronoun !== 'его') throw new Error('Unknown friend pronoun')
   return { ...value, pronoun: value.pronoun, subs: number(value.subs) }

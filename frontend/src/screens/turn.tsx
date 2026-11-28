@@ -19,11 +19,11 @@ import { flushSync } from 'react-dom'
 import { shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
 import { firstPost, results } from '../api/mock'
-import type { CommentT, Post, PostResult } from '../api/types'
+import type { BoosterStock, CommentT, Post, PostResult, UsedBooster } from '../api/types'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, Sheet, TopBar, EnergyBadge, Whisper, fmt, plural } from '../ui'
+import { Avatar, BottomCTA, Button, Comment, Ribbon, Sheet, TopBar, EnergyBadge, Whisper, fmt, plural } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { contentOf, optionalWorldTemplate, worldOf } from '../api/worldContent'
@@ -31,6 +31,7 @@ import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 import './postResult.css'
+import './share.css'
 import { hasDesktopPointer, submitOnDesktopEnter, TextField } from '../ui/TextField'
 import { completePostDraft, draftKey, hasPostDraft, readPostDraft, readReplyDraft, replyDraftKey, savePostDraft, saveReplyDraft, type PostDraft, type ReplyDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
@@ -136,9 +137,15 @@ export function Compose() {
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" hint={!guest && !repostId && profile && <NextStoryEditorHint player={profile} />} disabled={!text.trim()} onMain={publish} />
+      <BottomCTA main="Опубликовать" shortcut={<kbd className="enter-shortcut" title="Enter в поле поста. Shift+Enter добавляет строку.">↵ Enter</kbd>}
+        hint={!guest && !repostId && profile && <NextStoryEditorHint player={profile} />} disabled={!text.trim()} onMain={publish} />
     </div>
   )
+}
+
+const boosterTitles = {
+  viralCard: 'Сработала виральная карта',
+  flopGuard: 'Сработал флоп-гард',
 }
 
 // 02-2: живая реакция 3–4 с, потом итог одной карточкой
@@ -150,6 +157,7 @@ export function Live() {
   const [views, setViews] = useState(0)
   const [typing, setTyping] = useState<string | null>(null)
   const [phase, setPhase] = useState<'generating' | 'reacting'>('generating')
+  const [usedBooster, setUsedBooster] = useState<UsedBooster>()
   useEffect(() => {
     if (guest) {
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -190,6 +198,8 @@ export function Live() {
       if (!active) return
       if (!latest) patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + created.result.delta) })
       setViews(created.post.views)
+      const { virality } = created.result
+      if (virality === 'viralCard' || virality === 'flopGuard') setUsedBooster(virality)
       setPhase('reacting')
       setFloats(created.post.likes > 0 ? [{ id: 0, emoji: '♡', x: 45 }] : [])
       const star = contentOf(p.world).stars.find(item => `Star_${item.id}` === created.predictedAuthorId)
@@ -214,13 +224,13 @@ export function Live() {
         none: '02-3_result', viral: '02-5_viral', flop: '02-4_flop',
         viralCard: '02-5_viral', flopGuard: '02-3_result',
       }[result.virality]
-      nav.replace(screen, { result, post: created.post, dailyBaseline, dailyAfterPost, dailyAfterStar, commentPromise, predictedAuthorId: created.predictedAuthorId })
+      nav.replace(screen, { result, post: created.post, boosterStock: latest?.boosterStock, dailyBaseline, dailyAfterPost, dailyAfterStar, commentPromise, predictedAuthorId: created.predictedAuthorId })
     })() }, 0)
     return () => { active = false; clearTimeout(start) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="screen">
-      <ChannelHead />
+      <ChannelHead spentBooster={usedBooster} />
 
       <div className="pad" style={{ position: 'relative' }}>
         <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>
@@ -232,9 +242,13 @@ export function Live() {
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
+        {usedBooster && <div className="live-booster" role="status">
+          <span className={`booster-result-mark${usedBooster === 'flopGuard' ? ' booster-result-mark--guard' : ''}`} aria-hidden="true">{usedBooster === 'viralCard' ? '↗' : '✦'}</span>
+          <div><b>{boosterTitles[usedBooster]}</b><p className="small muted">Собираем итог…</p></div>
+        </div>}
         {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает...</div>}
       </div>
-      <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'готовим пост' : 'Собираем итог…'}</div>
+      {!usedBooster && <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'готовим пост' : 'Собираем итог…'}</div>}
     </div>
   )
 }
@@ -264,6 +278,7 @@ function PublishError() {
 }
 
 const resultNumber = new Intl.NumberFormat('ru-RU')
+const resultChange = new Intl.NumberFormat('ru-RU', { signDisplay: 'exceptZero' })
 const viewedResults = new Set<string>()
 
 function ResultDelta({ delta }: { delta: number }) {
@@ -407,42 +422,51 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   }, [commentText, post.id])
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
   const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
-  const explanation = r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
+  const boosterStock = nav.params.boosterStock as BoosterStock | undefined
+  const boosted = r.virality === 'viralCard' || r.virality === 'flopGuard'
+  const awards = boosted ? r.ribbons.filter(award => award.title !== 'залёт') : r.ribbons
+  const crowd = r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
+    world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? pulse : undefined} />
   return (
     <div className="screen no-tab">
       <ChannelHead />
       <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}{!guest && <QuotedPost repostId={post.repostId} />}<div style={{ marginTop: 8 }}><span className="small muted">♡ {fmt(post.likes)}</span><span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
       <div className="sheet-bg post-result-backdrop" style={{ background: 'rgba(8,8,12,.55)' }}>
-        <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}`}>
-          <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
+        <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}${boosted ? ' post-result--boosted' : ''}`}>
+          <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')} />
           <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>
           <div className="post-result-content">
-            <ResultDelta key={post.id} delta={r.delta} />
-            {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
-              world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? pulse : undefined} />}
-            <dl className="post-result-stats small muted">
-              <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
-              <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
-            </dl>
-            {realPost && dailyBaseline && <DailyTaskResult key={post.id} baseline={dailyBaseline}
-              afterPost={dailyAfterPost} afterStar={dailyAfterStar} postId={post.id} onPulse={pulse} />}
-            <section className="post-result-reaction" aria-label="Ответ персонажа">
-              <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong>{handle && <span className="small muted result-hero-handle">{handle}</span>}<div className="small muted">{guest?.world.title ?? world?.title} · AI-персонаж</div></div></div>
-              {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
-              {continuation && <p className="small muted world-reply-hint"><b>Как продолжить</b> {continuation}</p>}
-            </section>
-            {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
-            <details className="result-details"><summary>Разбор поста</summary>
-              {explanation && <p className="small muted">{explanation}</p>}
-              <div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
-              <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-            </details>
-            {!guest && <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>}
+            {boosted && <div className="post-result-highlight"><ResultDelta key={post.id} delta={r.delta} /></div>}
+            <div className="post-result-overview">
+              {!boosted && <ResultDelta key={post.id} delta={r.delta} />}
+              {boosted && <ResultBooster result={r} stock={boosterStock} />}
+              {!boosted && crowd}
+              {(!boosted || r.boosterEffect?.viewsWithoutBooster === undefined) && <dl className="post-result-stats small muted">
+                <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
+                {!boosted && <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>}
+              </dl>}
+            </div>
+            {boosted && crowd}
+            <div className="post-result-followup">
+              {realPost && dailyBaseline && <DailyTaskResult key={post.id} baseline={dailyBaseline}
+                afterPost={dailyAfterPost} afterStar={dailyAfterStar} postId={post.id} onPulse={pulse} />}
+              <section className="post-result-reaction" aria-label="Ответ персонажа">
+                <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={boosted ? 32 : 40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong>{handle && <span className="small muted result-hero-handle">{handle}</span>}<div className="small muted">{guest?.world.title ?? world?.title} · AI-персонаж</div></div></div>
+                {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
+                {continuation && <p className="small muted world-reply-hint"><b>Как продолжить</b> {continuation}</p>}
+              </section>
+              <div className="post-result-tools">
+                {(r.whys.length > 0 || awards.length > 0) && <details className="result-details"><summary>Разбор поста</summary>
+                  <div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
+                  <div className="result-awards">{awards.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
+                </details>}
+              </div>
+            </div>
           </div>
           <div className="post-result-actions">
             {guest?.hint}
             <span data-game-onboarding-post={comment ? post.id : undefined}><Button onClick={openConversation} disabled={waitingForReply}>
-              {guest ? guestSignupLabel : waitingForReply ? 'Ждём ответ героя…' : commentText ? (speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
+              {guest ? guestSignupLabel : waitingForReply ? 'Ждём ответ героя…' : commentText ? (!boosted && speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
             </Button></span>
             {!guest && !gameOnboardingActive(onboarding) && <Button secondary onClick={() => { tap('result_open_next_post'); nav.replace('02-1_compose') }}>Новый пост</Button>}
           </div>
@@ -450,6 +474,35 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
       </div>
     </div>
   )
+}
+
+function ResultBooster({ result, stock }: { result: PostResult; stock?: BoosterStock }) {
+  const viral = result.virality === 'viralCard'
+  const { multiplier, extraViews, subscriberDeltaWithoutBooster, viewsWithoutBooster } = result.boosterEffect ?? {}
+  const hasComparison = subscriberDeltaWithoutBooster !== undefined && viewsWithoutBooster !== undefined
+  const remaining = stock && (viral ? stock.viralCharges : stock.flopGuardCharges)
+  const viralEffect = multiplier == null
+    ? 'Карта применила множитель к просмотрам и приросту подписчиков.'
+    : `Просмотры и прирост подписчиков ×${resultNumber.format(multiplier)}.`
+  const guardEffect = extraViews == null
+    ? 'Карта добавила просмотры.'
+    : `+${resultNumber.format(extraViews)} ${plural(extraViews, 'просмотр', 'просмотра', 'просмотров')}.`
+  return <section className={`post-result-booster${viral ? '' : ' post-result-booster--guard'}`}>
+    <div className="post-result-booster-head">
+      <span className="booster-result-mark" aria-hidden="true">{viral ? '↗' : '✦'}</span>
+      <strong>{boosterTitles[viral ? 'viralCard' : 'flopGuard']}</strong>
+      {remaining !== undefined && <span className="post-result-booster-stock">Осталось {resultNumber.format(remaining)}</span>}
+    </div>
+    {hasComparison ? <table className="booster-comparison" aria-label="Результат этого поста без карты и с картой">
+      <thead><tr><td></td><th scope="col">Без карты</th><th scope="col">С картой</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Подписчики</th><td>{resultChange.format(subscriberDeltaWithoutBooster)}</td><td>{resultChange.format(result.delta)}</td></tr>
+        <tr><th scope="row">Просмотры</th><td>{resultNumber.format(viewsWithoutBooster)}</td><td>{resultNumber.format(result.views)}</td></tr>
+      </tbody>
+    </table> : <p className="small">{viral
+      ? `Пост залетел. ${viralEffect}`
+      : `Карта защитила от отписок и дала прирост подписчиков. ${guardEffect}`}</p>}
+  </section>
 }
 
 export const Result = () => { const n = useNav(); const guest = useGuestSession(); if (guest) return <ResultCard r={guest.result} post={guest.post} theme="normal" />; const r = (n.params.result as PostResult) ?? results.normal; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="normal" /> }
@@ -716,7 +769,10 @@ export function Thread() {
       <WorldContext world={player.world} />
       <div className="pad">
         {typeof nav.params.guestImportNotice === 'string' && <div className="card" role="status">{nav.params.guestImportNotice}</div>}
-        <div className="card" style={{ marginBottom: 12 }}>{shownPost.text}{!guest && <QuotedPost repostId={shownPost.repostId} />}{!guest && <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={shownPost.id} likes={shownPost.likes} likedBy={shownPost.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!shownPost.repostId && <RepostAction postId={shownPost.id} />}</div>{shownPost.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div>}</div>
+        <div className="card" style={{ marginBottom: 12 }}>{shownPost.text}{!guest && <QuotedPost repostId={shownPost.repostId} />}{!guest && <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={shownPost.id} likes={shownPost.likes} likedBy={shownPost.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!shownPost.repostId && <RepostAction postId={shownPost.id} />}</div>{shownPost.authorId === `Player_${player.id.replaceAll('-', '')}` && <div className="thread-own-post-actions">
+          <button type="button" className="text-button" onClick={() => nav.push('02-7_share', { post: shownPost })}>Поделиться</button>
+          <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>
+        </div>}</div>}</div>
         {showHelp && !onboarding && !directReply && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
         {(!showHelp || !!onboarding || directReply) && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => {
@@ -774,24 +830,33 @@ function Share() {
   // Публичную картинку 9:16 Telegram загружает без заголовков авторизации.
   const storyCardUrl = new URL(`${apiBaseUrl ?? ''}/cards/story/${encodeURIComponent(player.id)}/${encodeURIComponent(post.id)}.png`, location.origin).toString()
   const toStory = () => { if (!link) return; track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(storyCardUrl, { text, widgetLink: { url: link, name: 'Играть' } }) }
-  return (
-    <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Поделиться" />
-      <div className="pad">
-        <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420)', borderRadius: 14, padding: 14, marginBottom: 12 }}>
-          <div className="small" style={{ color: 'var(--gift)' }}>РЕКИ · МОЙ ПОСТ</div>
-          <div style={{ margin: '8px 0' }}>{post.text}</div>
-          <div className="small muted">👁 {fmt(post.views)}</div>
-          <div className="small" style={{ marginTop: 8 }}>а ты кем будешь в {contentOf(player.world).where}? <b>▶ Играть</b></div>
-        </div>
-        <Gift style={{ marginBottom: 12 }}>Позови друга в Реки</Gift>
-        <div className="small muted">Telegram откроет список твоих чатов. Мы его не видим и никому не пишем сами.</div>
-      </div>
-      {linkError && <div className="pad" role="alert">Не удалось получить твою ссылку.<Button secondary onClick={retry}>Попробовать снова</Button></div>}
-      {shareError && <p className="pad small" role="alert">{shareError}</p>}
-      <BottomCTA disabled={!link} secondDisabled={!link} second={inTelegram && shareStory.isAvailable() ? '＋ В сторис' : undefined} onSecond={toStory} main="Отправить в чат" onMain={() => void toChat()} />
+  const shareLabel = inTelegram || !navigator.share ? 'Отправить в Telegram' : 'Поделиться постом'
+  return <div className="screen no-tab share-screen">
+    <TopBar onBack={nav.back} title="Поделиться постом" />
+    <div className="pad share-content">
+      <article className="share-post-preview" aria-label="Превью поста">
+        <header className="share-post-author">
+          <Avatar seed={player.handle} world={player.world} avatarStyle={player.avatarStyle} size={40} />
+          <div><strong>{player.name}</strong><p className="small muted">{worldOf(player.world).title}</p></div>
+        </header>
+        <p className="share-post-text">{post.text}</p>
+        <p className="small muted">Просмотры {fmt(post.views)}</p>
+      </article>
+      <section className="share-controls" aria-label="Отправка поста">
+        {link ? <>
+          <p className="small muted">К посту добавится твоя ссылка-приглашение в игру.</p>
+          <div className="share-buttons">
+            <Button onClick={() => void toChat()}>{shareLabel}</Button>
+            {inTelegram && shareStory.isAvailable() && <Button secondary onClick={toStory}>В сторис</Button>}
+          </div>
+        </> : linkError ? <>
+          <p role="alert">Не удалось получить ссылку-приглашение.</p>
+          <Button secondary onClick={retry}>Попробовать снова</Button>
+        </> : <p className="small muted" role="status">Готовим ссылку-приглашение…</p>}
+        {shareError && <p className="small" role="alert">{shareError}</p>}
+      </section>
     </div>
-  )
+  </div>
 }
 
 register({
