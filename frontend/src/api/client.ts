@@ -105,7 +105,7 @@ function rememberPlayer(player: Player): Player {
     setTelemetryPlayerAvailable(true);
     sessionIdentity = { ...player, energy: player.postsLeft };
     sessionPlayer = player;
-    setAnalyticsWorld(player.worldInstanceId, player.difficulty);
+    setAnalyticsWorld(player.worldInstanceId, player.difficulty, player.hitOwnWorldMilestone === true);
     observeDailyTaskProgress(player);
     return player;
 }

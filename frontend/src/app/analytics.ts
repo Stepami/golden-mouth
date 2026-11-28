@@ -38,13 +38,26 @@ function receiveNotificationOpen(id: unknown) {
 
 let selectedDifficulty: string | undefined
 let selectedWorldId: string | undefined
-export function setAnalyticsWorld(worldId: string | undefined, difficulty?: string) { selectedWorldId = worldId; selectedDifficulty = difficulty }
+let ownWorldAccess: boolean | undefined
+export function setAnalyticsWorld(worldId: string | undefined, difficulty?: string, ownWorldUnlocked?: boolean) {
+  selectedWorldId = worldId
+  selectedDifficulty = difficulty
+  ownWorldAccess = ownWorldUnlocked
+}
+
+const ownWorldAccessProps = (): Props => ownWorldAccess === undefined ? {} : {
+  kind: ownWorldAccess ? 'own_world_open' : 'own_world_locked',
+}
+export function trackInviteAction(name: 'invite_opened' | 'invite_link_copied' | 'invite_sent') {
+  event(name, ownWorldAccessProps())
+  if (name === 'invite_opened') reachMetrikaGoal('invite_friend_click')
+}
 
 const activeTime = new ActiveTime(performance.now(), document.visibilityState === 'visible')
 let installed = false
 function recordActiveTime() {
   const ms = activeTime.take(performance.now())
-  if (ms > 0) event('active_time', { ms })
+  if (ms > 0) event('active_time', { ms, ...ownWorldAccessProps() })
 }
 
 const q: AEvent[] = []

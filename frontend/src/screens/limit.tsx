@@ -1,4 +1,4 @@
-import { reachMetrikaGoal } from '../app/metrika'
+import { trackInviteAction } from '../app/analytics'
 import { useState } from 'react'
 import { copyTextToClipboard, shareURL } from '@tma.js/sdk'
 import { api } from '../api/client'
@@ -13,7 +13,7 @@ import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 
 const shareInvite = (link: string) => {
-  track('invite_sent')
+  trackInviteAction('invite_sent')
   const text = 'Играю в Реки: веду канал, а AI-звёзды реагируют на каждый пост. Заходи в мой мир!'
   if (inTelegram) shareURL.ifAvailable(link, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`)
 }
@@ -32,7 +32,7 @@ function Limit() {
         <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга и получи 3 кристалла после его регистрации по ссылке</Gift>
         <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 энергии и все миры ›</button>
       </div>
-      <BottomCTA main="Позвать друга" onMain={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }} />
+      <BottomCTA main="Позвать друга" onMain={() => { trackInviteAction('invite_opened'); nav.push('04-3_invite') }} />
     </div>
   )
 }
@@ -104,7 +104,7 @@ function Invite() {
   const { link, error: linkError, retry } = useReferralLink()
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
-  const copy = async () => { if (!link) return; try { if (inTelegram) await copyTextToClipboard(link); else await navigator.clipboard.writeText(link); setCopied(true); setCopyError(false) } catch { setCopyError(true) } }
+  const copy = async () => { if (!link) return; try { if (inTelegram) await copyTextToClipboard(link); else await navigator.clipboard.writeText(link); setCopied(true); setCopyError(false); trackInviteAction('invite_link_copied') } catch { setCopyError(true) } }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Позвать друзей" />

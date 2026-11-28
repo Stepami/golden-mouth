@@ -109,14 +109,18 @@ export function clearLandingWorld() {
 const visitorKey = 'reki:landing:visitor:v1'
 let visitorFallback: string | undefined
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
-export function landingVisitIdentity(): { visitorId: string; entryId: string } | undefined {
-  const value = read()
-  if (!value) return
+export function landingVisitorId(): string {
   if (!visitorFallback) {
     try { const stored = localStorage.getItem(visitorKey); if (stored && uuid.test(stored)) visitorFallback = stored } catch { /* Optional storage. */ }
     visitorFallback ??= crypto.randomUUID()
     try { localStorage.setItem(visitorKey, visitorFallback) } catch { /* No fingerprint fallback. */ }
   }
+  return visitorFallback
+}
+export function landingVisitIdentity(): { visitorId: string; entryId: string } | undefined {
+  const value = read()
+  if (!value) return
+  const visitorId = landingVisitorId()
   if (!value.entryId || !uuid.test(value.entryId)) save({ ...value, entryId: crypto.randomUUID() })
-  return { visitorId: visitorFallback, entryId: read()!.entryId! }
+  return { visitorId, entryId: read()!.entryId! }
 }
